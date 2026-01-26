@@ -6,7 +6,7 @@ export const roleEnum = pgEnum("role", ["student", "admin"]);
 export const docStatusEnum = pgEnum("doc_status", ["pending", "uploaded", "reviewing", "approved", "rejected"]);
 
 // Users Table
-export const users = pgTable("users", {
+export const users = pgTable("user", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name"),
     email: text("email").notNull().unique(),
@@ -14,13 +14,14 @@ export const users = pgTable("users", {
     image: text("image"),
     password: text("password"), // Added for credentials login
     role: roleEnum("role").default("student"),
+    onboardingStep: integer("onboardingStep").default(1),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Accounts Table (for OAuth)
 export const accounts = pgTable(
-    "accounts",
+    "account",
     {
         userId: uuid("userId")
             .notNull()
@@ -44,7 +45,7 @@ export const accounts = pgTable(
 );
 
 // Sessions Table
-export const sessions = pgTable("sessions", {
+export const sessions = pgTable("session", {
     sessionToken: text("sessionToken").primaryKey(),
     userId: uuid("userId")
         .notNull()
@@ -54,7 +55,7 @@ export const sessions = pgTable("sessions", {
 
 // Verification Tokens Table
 export const verificationTokens = pgTable(
-    "verificationTokens",
+    "verificationToken",
     {
         identifier: text("identifier").notNull(),
         token: text("token").notNull(),
@@ -67,9 +68,8 @@ export const verificationTokens = pgTable(
     })
 );
 
-
 // Programs Table
-export const programs = pgTable("programs", {
+export const programs = pgTable("program", {
     id: uuid("id").defaultRandom().primaryKey(),
     university: text("university").notNull(),
     logo: text("logo"),
@@ -94,7 +94,7 @@ export const programs = pgTable("programs", {
 });
 
 // Applications Table
-export const applications = pgTable("applications", {
+export const applications = pgTable("application", {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id").references(() => users.id).notNull(),
     programId: uuid("program_id").references(() => programs.id).notNull(),
@@ -103,7 +103,7 @@ export const applications = pgTable("applications", {
 });
 
 // Documents Table
-export const documents = pgTable("documents", {
+export const documents = pgTable("document", {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id").references(() => users.id).notNull(),
     type: text("type").notNull(),

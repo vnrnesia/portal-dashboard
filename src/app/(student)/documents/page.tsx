@@ -1,10 +1,11 @@
-"use client";
-
 import { DocumentUploadList } from "@/components/documents/DocumentUpload";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
+import { getDocuments } from "@/actions/documents";
 
-export default function DocumentsPage() {
+export default async function DocumentsPage() {
+    const docs = await getDocuments();
+
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             <div>
@@ -20,7 +21,7 @@ export default function DocumentsPage() {
                 </div>
             </div>
 
-            <DocumentUploadList />
+            <DocumentUploadList initialDocuments={docs} />
         </div>
     );
 }

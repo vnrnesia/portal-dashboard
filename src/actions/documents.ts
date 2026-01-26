@@ -63,3 +63,37 @@ export async function uploadContract(fileName: string, fileUrl: string) {
 
     revalidatePath("/contract");
 }
+
+export async function uploadDocument(type: string, fileName: string, fileUrl: string, label: string) {
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+
+    const existing = await db.query.documents.findFirst({
+        where: and(
+            eq(documents.userId, session.user.id),
+            eq(documents.type, type)
+        )
+    });
+
+    if (existing) {
+        await db.update(documents)
+            .set({
+                status: "uploaded",
+                fileName,
+                fileUrl,
+                updatedAt: new Date()
+            })
+            .where(eq(documents.id, existing.id));
+    } else {
+        await db.insert(documents).values({
+            userId: session.user.id,
+            type,
+            label,
+            status: "uploaded",
+            fileName,
+            fileUrl
+        });
+    }
+
+    revalidatePath("/documents");
+}

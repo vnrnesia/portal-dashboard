@@ -1,7 +1,6 @@
 "use client";
 
-import { useAuthStore } from "@/lib/stores/useAuthStore";
-import { useFunnelStore, FUNNEL_STEPS, FunnelStep } from "@/lib/stores/useFunnelStore";
+import { useSession } from "next-auth/react";
 import { DetailedTimeline } from "@/components/dashboard/DetailedTimeline";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { Bell, ArrowRight, Star } from "lucide-react";
@@ -10,17 +9,37 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
-    const { user } = useAuthStore();
-    const { currentStep } = useFunnelStore();
+    const { data: session } = useSession();
+    const user = session?.user;
+    // @ts-ignore
+    const currentStep = user?.onboardingStep || 1;
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    // Find current step details
-    const stepDetails = FUNNEL_STEPS.find(s => s.id === currentStep) || FUNNEL_STEPS[1];
-    const nextStep = FUNNEL_STEPS.find(s => s.id === currentStep + 1);
+    // Step labels mapping
+    const stepLabels: Record<number, string> = {
+        1: "Program Seçimi",
+        2: "Evrak Toplama",
+        3: "Sözleşme Onayı",
+        4: "Yeminli Tercüme",
+        5: "Üniversite Başvurusu",
+        6: "Uçuş ve Konaklama",
+    };
+
+    const nextStepLabels: Record<number, string> = {
+        1: "/programs",
+        2: "/documents",
+        3: "/contract",
+        4: "/translation", // or timeline
+        5: "/application-status",
+        6: "/flight",
+    };
+
+    const currentLabel = stepLabels[currentStep] || "Bilinmiyor";
+    const nextPath = nextStepLabels[currentStep] || "/dashboard";
 
     const mockNotifications = [
         { id: 1, text: "Evraklarınız incelenmeye alındı.", time: "2 saat önce", unread: true },
@@ -37,7 +56,7 @@ export default function DashboardPage() {
                     <p className="text-gray-500">Hoş geldin, <span className="font-semibold text-primary">{user?.name}</span>. Eğitim yolculuğunda bugünkü durumun:</p>
                 </div>
                 <div className="hidden md:block text-sm text-gray-500 bg-orange-50 px-4 py-2 rounded-lg border border-orange-100">
-                    Mevcut Aşama: <strong>{stepDetails.label}</strong>
+                    Mevcut Aşama: <strong>{currentLabel}</strong>
                 </div>
             </div>
 
@@ -55,17 +74,15 @@ export default function DashboardPage() {
                                 <span className="font-medium">Sıradaki Adım</span>
                             </div>
                             <div>
-                                <h2 className="text-3xl font-bold mb-2">{stepDetails.id === FunnelStep.FLIGHT_TICKET ? "Yolculuk Hazır!" : stepDetails.label}</h2>
+                                <h2 className="text-3xl font-bold mb-2">{currentLabel}</h2>
                                 <p className="text-orange-100 text-lg max-w-lg">
-                                    {stepDetails.id === FunnelStep.FLIGHT_TICKET
-                                        ? "Tüm işlemler tamamlandı. Uçuş bilgilerinizi kontrol edin."
-                                        : "Başvuru sürecini tamamlamak için bu adımı bitirmelisin."}
+                                    Başvuru sürecini tamamlamak için bu adımı bitirmelisin.
                                 </p>
                             </div>
                             <div className="pt-2">
                                 <Button asChild size="lg" className="bg-white text-primary hover:bg-gray-100 font-bold border-0 cursor-pointer">
-                                    <Link href={stepDetails.path}>
-                                        {stepDetails.id === FunnelStep.FLIGHT_TICKET ? "Biletini Gör" : "Devam Et"}
+                                    <Link href={nextPath}>
+                                        Devam Et
                                         <ArrowRight className="ml-2 h-5 w-5" />
                                     </Link>
                                 </Button>
@@ -96,7 +113,7 @@ export default function DashboardPage() {
 
                 {/* Sidebar Column */}
                 <div className="space-y-6">
-                    <DetailedTimeline />
+                    <DetailedTimeline currentStep={currentStep} />
                 </div>
             </div>
 

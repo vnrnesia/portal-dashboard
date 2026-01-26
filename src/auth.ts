@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/db"
 import Credentials from "next-auth/providers/credentials"
+import Google from "next-auth/providers/google"
 import { users } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { compare } from "bcryptjs"
@@ -16,9 +17,14 @@ const signInSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: DrizzleAdapter(db),
+  adapter: DrizzleAdapter(db) as any,
   session: { strategy: "jwt" },
   providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
+    }),
     Credentials({
       credentials: {
         email: {},
@@ -39,9 +45,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const passwordsMatch = await compare(password, user.password);
 
           if (passwordsMatch) {
+            // Prevent login if email is not verified
+            if (!user.emailVerified) return null;
+
             return {
               ...user,
               role: user.role || "student",
+              onboardingStep: user.onboardingStep || 1,
             };
           }
         }
@@ -57,6 +67,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = (user as any).role || "student";
         token.id = user.id;
+        token.onboardingStep = (user as any).onboardingStep || 1;
       }
       return token;
     },
@@ -64,8 +75,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token && session.user) {
         session.user.role = token.role as "student" | "admin";
         session.user.id = token.id as string;
+        // @ts-ignore
+        session.user.onboardingStep = token.onboardingStep as number;
       }
       return session;
     },
+    async signIn({ user, account }) {
+      // Allow OAuth without email verification
+      if (account?.provider !== "credentials") return true;
+
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.id, user.id!)
+      });
+
+      // Prevent sign in if email is not verified
+      if (!existingUser?.emailVerified) return false;
+
+      return true;
+    }
   },
 })

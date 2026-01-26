@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { FileText, Download, Check, Loader2, User, Phone, MapPin } from "lucide-react";
-import { useDocStore } from "@/lib/stores/useDocStore";
-import { useAuthStore } from "@/lib/stores/useAuthStore";
 import { useAppStore } from "@/lib/stores/useAppStore";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -15,11 +13,20 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadContract, updateDocumentStatus } from "@/actions/documents";
 
+interface ContractViewerProps {
+    userName: string;
+    contractDoc?: {
+        id: string;
+        status: string | null;
+        fileName: string | null;
+        fileUrl: string | null;
+    } | null;
+}
 
-export function ContractViewer() {
+export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
     const [isExporting, setIsExporting] = useState(false);
-    const { user } = useAuthStore();
     const { selectedProgram } = useAppStore();
     const contractRef = useRef<HTMLDivElement>(null);
 
@@ -29,26 +36,19 @@ export function ContractViewer() {
         phone: "",
         address: ""
     });
-    const [isDetailsSubmitted, setIsDetailsSubmitted] = useState(false);
-
-    // Ensure we have the latest docs (migrates old state if needed)
-    useEffect(() => {
-        useDocStore.getState().initializeDocs();
-    }, []);
+    const [isDetailsSubmitted, setIsDetailsSubmitted] = useState(!!contractDoc); // If doc exists, skip details
 
     const currentDate = new Date().toLocaleDateString('tr-TR');
 
     // Dynamic Data
-    const studentName = user?.name || "Öğrenci Adı";
+    const studentName = userName || "Öğrenci Adı";
     const universityName = selectedProgram?.university || "UNIVERISTY_PLACEHOLDER";
     const programName = selectedProgram?.name || "PROGRAM_PLACEHOLDER";
 
     // Offline Signing State
-    const { documents, updateStatus } = useDocStore();
-    const signedContractDoc = documents.find(d => d.type === 'signed_contract');
-    const isUploaded = signedContractDoc?.status === 'uploaded' || signedContractDoc?.status === 'approved';
-
-    const isReviewing = signedContractDoc?.status === 'reviewing';
+    const isUploaded = contractDoc?.status === 'uploaded' || contractDoc?.status === 'approved' || contractDoc?.status === 'reviewing';
+    const isReviewing = contractDoc?.status === 'reviewing';
+    const [localUploadedFileName, setLocalUploadedFileName] = useState<string | null>(contractDoc?.fileName || null);
 
     const handleDetailsSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,13 +64,20 @@ export function ContractViewer() {
         toast.success("Bilgiler kaydedildi, sözleşme oluşturuluyor...");
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Mock upload
-            const fakeUrl = URL.createObjectURL(file);
-            updateStatus('6', 'uploaded', file.name, fakeUrl);
-            toast.success("İmzalı sözleşme yüklendi.");
+            try {
+                // In a real app, upload to S3/Blob storage here and get URL.
+                // For now, we simulate with a fake URL or base64.
+                const fakeUrl = URL.createObjectURL(file);
+
+                await uploadContract(file.name, fakeUrl);
+                setLocalUploadedFileName(file.name);
+                toast.success("İmzalı sözleşme yüklendi.");
+            } catch (error) {
+                toast.error("Yükleme başarısız oldu.");
+            }
         }
     };
 
@@ -132,6 +139,7 @@ export function ContractViewer() {
             const imgData = canvas.toDataURL('image/png');
 
             // Initialize PDF
+            const jsPDF = (await import('jspdf')).default;
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
@@ -166,11 +174,13 @@ export function ContractViewer() {
     };
 
     const handleSubmitForApproval = async () => {
-        // Change status to 'reviewing' to simulate submission
-        updateStatus('6', 'reviewing');
-        toast.success("Sözleşme onaya gönderildi.");
-        // Optional: Move to next funnel step if needed, or wait for admin approval
-        // useFunnelStore.getState().completeStep(); 
+        if (!contractDoc?.id) return;
+        try {
+            await updateDocumentStatus(contractDoc.id, "reviewing");
+            toast.success("Sözleşme onaya gönderildi.");
+        } catch (error) {
+            toast.error("İşlem başarısız.");
+        }
     };
 
     if (!isDetailsSubmitted && !isUploaded && !isReviewing) {
@@ -430,11 +440,17 @@ export function ContractViewer() {
                                         <FileText className="h-5 w-5 text-green-600" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-sm">{signedContractDoc?.fileName || "imzali_sozlesme.pdf"}</p>
+                                        <p className="font-medium text-sm">{localUploadedFileName || "imzali_sozlesme.pdf"}</p>
                                         <p className="text-xs text-green-600 font-medium">Başarıyla yüklendi</p>
                                     </div>
                                 </div>
-                                <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => updateStatus('6', 'pending')}>
+                                <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={async () => {
+                                    try {
+                                        // If it is already uploaded to DB, maybe we want to allow removing? 
+                                        // For now just reset local state if needed or implement a remove action
+                                        toast.info("Silme işlemi henüz aktif değil.");
+                                    } catch (e) { }
+                                }}>
                                     Kaldır
                                 </Button>
                             </div>

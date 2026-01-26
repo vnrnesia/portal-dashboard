@@ -4,18 +4,60 @@ import { CheckCircle2, Circle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
-export function DetailedTimeline() {
+export function DetailedTimeline({ currentStep = 1 }: { currentStep?: number }) {
+    // Step mapping:
+    // 1: Programs
+    // 2: Documents
+    // 3: Contract
+    // 4: Translation
+    // 5: Application
+    // 6: Flight/Timeline
+
+    // Visual Timeline Steps
     const steps = [
-        { id: 1, title: "Kayıt Ol", desc: "Sisteme kayıt işlemleri tamamlandı.", date: "20 Ocak 2026", status: "completed" },
-        { id: 2, title: "Hedef Analizi", desc: "Yapay zeka ile hedef belirleme yapıldı.", date: "20 Ocak 2026", status: "completed" },
-        { id: 3, title: "Program Seçimi", desc: "Münih Teknik Üniversitesi seçildi.", date: "22 Ocak 2026", status: "completed" },
-        { id: 4, title: "Sözleşme Onayı", desc: "Hizmet sözleşmesi dijital olarak onaylandı.", date: "24 Ocak 2026", status: "completed" },
-        { id: 5, title: "Evrak Toplama", desc: "Gerekli belgeler yükleniyor.", date: "Bugün", status: "current" },
-        { id: 6, title: "Yeminli Tercüme", desc: "Belgelerin tercümesi yapılacak.", status: "pending" },
-        { id: 7, title: "Üniversite Başvurusu", desc: "Resmi başvuru süreci.", status: "locked" },
-        { id: 8, title: "Kabul Mektubu", desc: "Üniversiteden cevap bekleniyor.", status: "locked" },
-        { id: 9, title: "Vize İşlemleri", desc: "Vize randevusu ve evrakları.", status: "locked" },
-        { id: 10, title: "Uçuş ve Konaklama", desc: "Yeni hayatına merhaba de!", status: "locked" },
+        { id: -1, title: "Kayıt Ol", desc: "Sisteme kayıt işlemleri tamamlandı.", date: "Tamamlandı", status: "completed" },
+        // Step 1: Program Seçimi
+        {
+            id: 1,
+            title: "Program Seçimi",
+            desc: "Üniversite ve bölüm seçimi.",
+            status: currentStep > 1 ? "completed" : currentStep === 1 ? "current" : "locked"
+        },
+        // Step 2: Evrak Toplama
+        {
+            id: 2,
+            title: "Evrak Toplama",
+            desc: "Gerekli belgelerin yüklenmesi.",
+            status: currentStep > 2 ? "completed" : currentStep === 2 ? "current" : "locked"
+        },
+        // Step 3: Sözleşme Onayı
+        {
+            id: 3,
+            title: "Sözleşme Onayı",
+            desc: "Hizmet sözleşmesinin onaylanması.",
+            status: currentStep > 3 ? "completed" : currentStep === 3 ? "current" : "locked"
+        },
+        // Step 4: Yeminli Tercüme
+        {
+            id: 4,
+            title: "Yeminli Tercüme",
+            desc: "Belgelerin tercüme işlemleri.",
+            status: currentStep > 4 ? "completed" : currentStep === 4 ? "current" : "locked"
+        },
+        // Step 5: Üniversite Başvurusu
+        {
+            id: 5,
+            title: "Üniversite Başvurusu",
+            desc: "Resmi başvuru süreci.",
+            status: currentStep > 5 ? "completed" : currentStep === 5 ? "current" : "locked"
+        },
+        // Step 6: Uçuş ve Konaklama
+        {
+            id: 6,
+            title: "Uçuş ve Konaklama",
+            desc: "Yeni hayatına merhaba de!",
+            status: currentStep > 6 ? "completed" : currentStep === 6 ? "current" : "locked"
+        },
     ];
 
     return (
@@ -58,9 +100,10 @@ export function DetailedTimeline() {
                                     </h4>
                                     <p className="text-xs text-gray-500 mt-1 leading-snug">{step.desc}</p>
                                 </div>
-                                {step.date && (
-                                    <span className="text-[10px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border ml-2 whitespace-nowrap">
-                                        {step.date}
+                                {/* Optional Date Display */}
+                                {step.status === "completed" && step.id !== -1 && (
+                                    <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-100 ml-2 whitespace-nowrap">
+                                        Tamamlandı
                                     </span>
                                 )}
                             </div>
