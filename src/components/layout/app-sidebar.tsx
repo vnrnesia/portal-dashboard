@@ -106,7 +106,16 @@ const data = {
     ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+// ... props definition
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+    user: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    }
+}
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
     const pathname = usePathname();
 
     return (
@@ -164,7 +173,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarGroup>
             </SidebarContent>
             <SidebarFooter>
-                <UserNav />
+                <UserNav user={user} />
             </SidebarFooter>
             <SidebarRail />
         </Sidebar>

@@ -28,6 +28,7 @@ const INITIAL_DOCS: Document[] = [
     { id: '3', type: 'transcript', label: 'Transkript (Not Dökümü)', status: 'pending' },
     { id: '4', type: 'photo', label: 'Biometrik Fotoğraf', status: 'pending' },
     { id: '5', type: 'language', label: 'Dil Yeterlilik Belgesi', status: 'pending' },
+    { id: '6', type: 'signed_contract', label: 'İmzalı Sözleşme', status: 'pending' },
 ];
 
 export const useDocStore = create<DocState>()(
@@ -53,9 +54,22 @@ export const useDocStore = create<DocState>()(
                     ),
                 })),
             initializeDocs: () => {
-                // Reset or init if empty
                 const state = get();
-                if (state.documents.length === 0) set({ documents: INITIAL_DOCS });
+                // 1. If empty, just set valid defaults
+                if (state.documents.length === 0) {
+                    set({ documents: INITIAL_DOCS });
+                    return;
+                }
+
+                // 2. If not empty, check if we are missing any new required docs (like signed_contract)
+                const existingIds = new Set(state.documents.map(d => d.id));
+                const missingDocs = INITIAL_DOCS.filter(d => !existingIds.has(d.id));
+
+                if (missingDocs.length > 0) {
+                    set((state) => ({
+                        documents: [...state.documents, ...missingDocs]
+                    }));
+                }
             }
         }),
         {

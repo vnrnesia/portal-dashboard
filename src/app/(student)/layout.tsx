@@ -15,14 +15,21 @@ import {
 } from "@/components/ui/breadcrumb"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 
-export default function StudentLayout({
+import { auth } from "@/auth"
+
+export default async function StudentLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
+    const session = await auth();
+
+    // Fallback user if something goes wrong (though middleware protects this)
+    const user = session?.user || { name: "Öğrenci", email: "guest@edu.com", image: "" };
+
     return (
         <SidebarProvider>
-            <AppSidebar />
+            <AppSidebar user={user} />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b px-4 justify-between bg-white/50 backdrop-blur-sm sticky top-0 z-10">
                     <div className="flex items-center gap-2">

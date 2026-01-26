@@ -2,7 +2,7 @@
 
 import { useAuthStore } from "@/lib/stores/useAuthStore";
 import { useFunnelStore, FUNNEL_STEPS, FunnelStep } from "@/lib/stores/useFunnelStore";
-import { TimelineWidget } from "@/components/dashboard/TimelineWidget";
+import { DetailedTimeline } from "@/components/dashboard/DetailedTimeline";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { Bell, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export default function DashboardPage() {
                         <div className="relative z-10 space-y-4">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-sm backdrop-blur-sm">
                                 <Star className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-                                Sıradaki Adım
+                                <span className="font-medium">Sıradaki Adım</span>
                             </div>
                             <div>
                                 <h2 className="text-3xl font-bold mb-2">{stepDetails.id === FunnelStep.FLIGHT_TICKET ? "Yolculuk Hazır!" : stepDetails.label}</h2>
@@ -63,7 +63,7 @@ export default function DashboardPage() {
                                 </p>
                             </div>
                             <div className="pt-2">
-                                <Button asChild size="lg" className="bg-white text-primary hover:bg-gray-100 font-bold border-0">
+                                <Button asChild size="lg" className="bg-white text-primary hover:bg-gray-100 font-bold border-0 cursor-pointer">
                                     <Link href={stepDetails.path}>
                                         {stepDetails.id === FunnelStep.FLIGHT_TICKET ? "Biletini Gör" : "Devam Et"}
                                         <ArrowRight className="ml-2 h-5 w-5" />
@@ -72,8 +72,6 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     </div>
-
-                    <TimelineWidget />
 
                     <div className="bg-white p-6 rounded-xl border shadow-sm">
                         <div className="flex items-center justify-between mb-4">
@@ -98,8 +96,13 @@ export default function DashboardPage() {
 
                 {/* Sidebar Column */}
                 <div className="space-y-6">
-                    <QuickActions />
+                    <DetailedTimeline />
                 </div>
+            </div>
+
+            {/* Bottom Section - Moved Quick Actions Here */}
+            <div>
+                <QuickActions />
             </div>
         </div>
     );
