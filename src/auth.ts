@@ -67,11 +67,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     async jwt({ token, user }) {
+      // On first login, set initial values from user object
       if (user) {
-        token.role = (user as any).role || "student";
         token.id = user.id;
+        token.role = (user as any).role || "student";
         token.onboardingStep = (user as any).onboardingStep || 1;
+        token.stepApprovalStatus = (user as any).stepApprovalStatus || "pending";
       }
+
+      // Always refresh role and approval status from database
+      if (token.id) {
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, token.id as string),
+          columns: { role: true, onboardingStep: true, stepApprovalStatus: true }
+        });
+        if (dbUser) {
+          token.role = dbUser.role || "student";
+          token.onboardingStep = dbUser.onboardingStep || 1;
+          token.stepApprovalStatus = dbUser.stepApprovalStatus || "pending";
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -80,6 +96,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         // @ts-ignore
         session.user.onboardingStep = token.onboardingStep as number;
+        // @ts-ignore
+        session.user.stepApprovalStatus = token.stepApprovalStatus as string;
       }
       return session;
     },

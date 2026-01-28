@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { Eye, Clock } from "lucide-react";
+import { Eye, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ApproveButton } from "@/components/admin/ApproveButton";
 
 export default async function AdminDashboardPage() {
     const students = await getStudents();
@@ -26,6 +28,9 @@ export default async function AdminDashboardPage() {
         6: "Uçuş",
     };
 
+    // Filter students pending approval
+    const pendingApprovals = students.filter(s => s.stepApprovalStatus === "pending");
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -38,6 +43,48 @@ export default async function AdminDashboardPage() {
                 <Button>Yeni Öğrenci Ekle (Manuel)</Button>
             </div>
 
+            {/* Pending Approvals Section */}
+            {pendingApprovals.length > 0 && (
+                <Card className="border-orange-200 bg-orange-50">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-orange-700">
+                            <AlertCircle className="h-5 w-5" />
+                            Bekleyen Onaylar ({pendingApprovals.length})
+                        </CardTitle>
+                        <CardDescription>Bu öğrenciler bir sonraki adıma geçmek için onayınızı bekliyor.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {pendingApprovals.map((student) => (
+                                <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={student.image || ""} />
+                                            <AvatarFallback>{student.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium">{student.name}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                Mevcut Adım: {stepLabels[student.onboardingStep || 1]}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <ApproveButton userId={student.id} />
+                                        <Button asChild size="sm" variant="outline">
+                                            <Link href={`/admin/users/${student.id}`}>
+                                                <Eye className="h-4 w-4 mr-1" /> Detay
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* All Students Table */}
             <div className="rounded-md border bg-white">
                 <Table>
                     <TableHeader>
@@ -46,13 +93,14 @@ export default async function AdminDashboardPage() {
                             <TableHead>Email</TableHead>
                             <TableHead>Durum</TableHead>
                             <TableHead>Mevcut Aşama</TableHead>
+                            <TableHead>Onay Durumu</TableHead>
                             <TableHead className="text-right">İşlemler</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {students.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
+                                <TableCell colSpan={6} className="h-24 text-center">
                                     Henüz kayıtlı öğrenci yok.
                                 </TableCell>
                             </TableRow>
@@ -80,6 +128,17 @@ export default async function AdminDashboardPage() {
                                                 {stepLabels[student.onboardingStep || 1] || "Bilinmiyor"}
                                             </Badge>
                                         </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge
+                                            variant={
+                                                student.stepApprovalStatus === "approved" ? "default" :
+                                                    student.stepApprovalStatus === "rejected" ? "destructive" : "secondary"
+                                            }
+                                        >
+                                            {student.stepApprovalStatus === "approved" ? "Onaylı" :
+                                                student.stepApprovalStatus === "rejected" ? "Reddedildi" : "Bekliyor"}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button asChild size="sm" variant="ghost">

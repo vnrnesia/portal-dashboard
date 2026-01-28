@@ -4,6 +4,7 @@ import type { AdapterAccount } from "next-auth/adapters";
 // Enums
 export const roleEnum = pgEnum("role", ["student", "admin"]);
 export const docStatusEnum = pgEnum("doc_status", ["pending", "uploaded", "reviewing", "approved", "rejected"]);
+export const stepApprovalStatusEnum = pgEnum("step_approval_status", ["pending", "approved", "rejected"]);
 
 // Users Table
 export const users = pgTable("user", {
@@ -15,6 +16,7 @@ export const users = pgTable("user", {
     password: text("password"), // Added for credentials login
     role: roleEnum("role").default("student"),
     onboardingStep: integer("onboardingStep").default(1),
+    stepApprovalStatus: stepApprovalStatusEnum("step_approval_status").default("pending"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });

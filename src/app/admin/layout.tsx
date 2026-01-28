@@ -30,7 +30,9 @@ export default async function AdminLayout({
     }
 
     // Role Protection
+    console.log(`[AdminLayout DEBUG] User: ${user.email}, Role: '${user.role}', ID: ${user.id}`);
     if (user.role !== "admin") {
+        console.log(`[AdminLayout] Access Denied. Redirecting...`);
         redirect("/dashboard"); // Kick non-admins back to student dashboard
     }
 

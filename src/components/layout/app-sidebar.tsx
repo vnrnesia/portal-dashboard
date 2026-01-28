@@ -114,6 +114,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
         image?: string | null;
         role?: "student" | "admin" | string;
         onboardingStep?: number;
+        stepApprovalStatus?: "pending" | "approved" | "rejected" | string;
     }
 }
 
