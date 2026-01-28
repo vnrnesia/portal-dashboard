@@ -49,7 +49,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (!user.emailVerified) return null;
 
             return {
-              ...user,
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              picture: user.image,
               role: user.role || "student",
               onboardingStep: user.onboardingStep || 1,
             };
