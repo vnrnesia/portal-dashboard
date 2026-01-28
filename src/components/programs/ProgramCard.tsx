@@ -8,6 +8,8 @@ import { ProgramDetailsDialog } from "./ProgramDetailsDialog";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFunnelStore, FunnelStep } from "@/lib/stores/useFunnelStore";
+import { advanceUserStep } from "@/actions/advance-step";
+import { toast } from "sonner";
 
 interface ProgramCardProps {
     program: Program;
@@ -19,11 +21,19 @@ export function ProgramCard({ program }: ProgramCardProps) {
     const [showDetails, setShowDetails] = useState(false);
     const router = useRouter();
 
-    const handleConfirmSelection = () => {
-        selectProgram(program);
-        setStep(FunnelStep.DOCUMENTS_UPLOAD);
-        setShowDetails(false);
-        router.push("/documents");
+    const handleConfirmSelection = async () => {
+        try {
+            // Advance step in database (step 1 -> step 2)
+            await advanceUserStep(2);
+
+            selectProgram(program);
+            setStep(FunnelStep.DOCUMENTS_UPLOAD);
+            setShowDetails(false);
+            router.push("/documents");
+        } catch (error) {
+            toast.error("Bir hata oluştu. Lütfen tekrar deneyin.");
+            console.error(error);
+        }
     };
 
     return (

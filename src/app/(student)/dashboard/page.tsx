@@ -3,10 +3,11 @@
 import { useSession } from "next-auth/react";
 import { DetailedTimeline } from "@/components/dashboard/DetailedTimeline";
 import { QuickActions } from "@/components/dashboard/QuickActions";
-import { Bell, ArrowRight, Star } from "lucide-react";
+import { Bell, ArrowRight, Star, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { getDocumentReviewStatus } from "@/actions/documents";
 
 export default function DashboardPage() {
     const { data: session } = useSession();
@@ -14,10 +15,20 @@ export default function DashboardPage() {
     // @ts-ignore
     const currentStep = user?.onboardingStep || 1;
     const [mounted, setMounted] = useState(false);
+    const [isInReview, setIsInReview] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Fetch document review status when step is 2
+    useEffect(() => {
+        if (currentStep === 2) {
+            getDocumentReviewStatus().then(result => {
+                setIsInReview(result.hasDocumentsInReview);
+            });
+        }
+    }, [currentStep]);
 
     // Step labels mapping
     const stepLabels: Record<number, string> = {
@@ -65,24 +76,39 @@ export default function DashboardPage() {
                 <div className="md:col-span-2 space-y-6">
 
                     {/* CTA Card for Next Step */}
-                    <div className="bg-gradient-to-br from-primary to-orange-700 p-8 rounded-2xl text-white shadow-xl relative overflow-hidden">
+                    <div className={`p-8 rounded-2xl text-white shadow-xl relative overflow-hidden ${isInReview
+                        ? "bg-gradient-to-br from-yellow-500 to-yellow-700"
+                        : "bg-gradient-to-br from-primary to-orange-700"
+                        }`}>
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 pointer-events-none" />
 
                         <div className="relative z-10 space-y-4">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-sm backdrop-blur-sm">
-                                <Star className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-                                <span className="font-medium">Sıradaki Adım</span>
+                                {isInReview ? (
+                                    <>
+                                        <Clock className="w-4 h-4 text-white" />
+                                        <span className="font-medium">İnceleniyor</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Star className="w-4 h-4 text-yellow-300 fill-yellow-300" />
+                                        <span className="font-medium">Sıradaki Adım</span>
+                                    </>
+                                )}
                             </div>
                             <div>
                                 <h2 className="text-3xl font-bold mb-2">{currentLabel}</h2>
                                 <p className="text-orange-100 text-lg max-w-lg">
-                                    Başvuru sürecini tamamlamak için bu adımı bitirmelisin.
+                                    {isInReview
+                                        ? "Evraklarınız danışmanlarımız tarafından inceleniyor. Size en kısa sürede dönüş yapılacaktır."
+                                        : "Başvuru sürecini tamamlamak için bu adımı bitirmelisin."
+                                    }
                                 </p>
                             </div>
                             <div className="pt-2">
                                 <Button asChild size="lg" className="bg-white text-primary hover:bg-gray-100 font-bold border-0 cursor-pointer">
                                     <Link href={nextPath}>
-                                        Devam Et
+                                        {isInReview ? "Evraklara Git" : "Devam Et"}
                                         <ArrowRight className="ml-2 h-5 w-5" />
                                     </Link>
                                 </Button>
@@ -90,24 +116,30 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-xl border shadow-sm">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold flex items-center gap-2">
-                                <Bell className="h-4 w-4" />
-                                Son Bildirimler
-                            </h3>
-                        </div>
-                        <div className="space-y-3">
-                            {mockNotifications.map((notif) => (
-                                <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                                    <div className={`w-2 h-2 mt-2 rounded-full ${notif.unread ? 'bg-red-500' : 'bg-gray-300'}`} />
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-900">{notif.text}</p>
-                                        <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
+                    {/* Notifications + Quick Actions side by side */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white p-6 rounded-xl border shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold flex items-center gap-2">
+                                    <Bell className="h-4 w-4" />
+                                    Son Bildirimler
+                                </h3>
+                            </div>
+                            <div className="space-y-3">
+                                {mockNotifications.map((notif) => (
+                                    <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <div className={`w-2 h-2 mt-2 rounded-full ${notif.unread ? 'bg-red-500' : 'bg-gray-300'}`} />
+                                        <div className="flex-1">
+                                            <p className="text-sm text-gray-900">{notif.text}</p>
+                                            <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
+
+                        {/* Quick Actions */}
+                        <QuickActions />
                     </div>
                 </div>
 
@@ -116,11 +148,7 @@ export default function DashboardPage() {
                     <DetailedTimeline currentStep={currentStep} />
                 </div>
             </div>
-
-            {/* Bottom Section - Moved Quick Actions Here */}
-            <div>
-                <QuickActions />
-            </div>
         </div>
     );
 }
+

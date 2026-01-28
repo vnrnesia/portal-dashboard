@@ -16,7 +16,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { updateDocumentStatus, uploadContract, uploadDocument } from "@/actions/documents";
+import { updateDocumentStatus, uploadContract, uploadDocument, deleteDocument, submitDocumentsForReview } from "@/actions/documents";
 
 // Define Document interface locally to avoid undefined issues if store is removed
 interface Document {
@@ -30,7 +30,7 @@ interface Document {
     validationError?: boolean;
 }
 
-function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPreview: (doc: Document) => void, onStatusChange: (id: string, status: "uploaded" | "pending", fileName?: string, fileUrl?: string) => void }) {
+function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPreview: (doc: Document) => void, onStatusChange: (id: string, status: "uploaded" | "pending", fileName?: string, fileUrl?: string, type?: string, label?: string) => Promise<void> | void }) {
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         if (acceptedFiles.length > 0) {
@@ -40,17 +40,22 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
                 // In a real app, upload to S3 here.
                 const url = URL.createObjectURL(file);
                 // Call parent handler which calls server action
-                onStatusChange(doc.id, 'uploaded', file.name, url);
+                await onStatusChange(doc.id, 'uploaded', file.name, url, doc.type, doc.label);
                 toast.success(`${doc.label} başarıyla yüklendi: ${file.name}`);
             } catch (error) {
                 toast.error("Yükleme sırasında bir hata oluştu.");
             }
         }
-    }, [doc.id, doc.label, onStatusChange]);
+    }, [doc.id, doc.type, doc.label, onStatusChange]);
 
-    const onDelete = () => {
-        onStatusChange(doc.id, 'pending');
-        toast.info(`${doc.label} silindi.`);
+    const onDelete = async () => {
+        try {
+            await deleteDocument(doc.id);
+            onStatusChange(doc.id, 'pending');
+            toast.info(`${doc.label} silindi.`);
+        } catch (error) {
+            toast.error("Silme işlemi başarısız oldu.");
+        }
     };
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -168,7 +173,7 @@ export function DocumentUploadList({ initialDocuments }: { initialDocuments: any
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
 
-    const handleStatusChange = async (id: string, status: "uploaded" | "pending", fileName?: string, fileUrl?: string) => {
+    const handleStatusChange = async (id: string, status: "uploaded" | "pending", fileName?: string, fileUrl?: string, type?: string, label?: string) => {
         setDocuments(prev => prev.map(doc => {
             if (doc.id === id || doc.type === id) {
                 return { ...doc, status, fileName: fileName || null, fileUrl: fileUrl || null, validationError: false };
@@ -176,30 +181,33 @@ export function DocumentUploadList({ initialDocuments }: { initialDocuments: any
             return doc;
         }));
 
-        // Trigger Server Action
-        // We need real IDs for server actions. Since we might have used 'type' as ID for missing docs, 
-        // we need to handle "create vs update" in the server action, or here.
-        // For simplicity, let's assume 'documents.ts' actions handles "upsert" by type if needed, 
-        // OR we just use a specific server action for uploading a generic document file.
-        // Let's use `uploadContract` like logic but for generic docs.
-
-        // Wait, `uploadContract` is specific. We need a general `uploadDocument` action.
-        // I will assume the user (me) will create it or use existing `updateDocumentStatus` if it existed.
-        // But `updateDocumentStatus` takes ID. 
-
-        // Let's update `documents.ts` to handle generic upsert by type later. 
-        // For now, UI update is enough to show responsiveness, but we should persist.
-        if (fileName && fileUrl) {
-            // Need a server action: uploadDocument(type, fileName, fileUrl)
-            // I'll assume we'll add it.
+        // Persist to database
+        if (status === "uploaded" && fileName && fileUrl && type && label) {
             try {
-                // await uploadDocument(docType, fileName, fileUrl); 
-            } catch (e) { }
+                await uploadDocument(type, fileName, fileUrl, label);
+            } catch (e) {
+                console.error("Failed to upload document:", e);
+            }
         }
     };
 
+    // Check if all documents are approved
+    const allDocumentsApproved = documents.length > 0 && documents.every(doc => doc.status === "approved");
+
+    // Check if any documents are in review (but not all approved)
+    const hasDocumentsInReview = !allDocumentsApproved && documents.some(
+        doc => doc.status === "reviewing" || doc.status === "approved"
+    );
+
     const handleSubmit = async () => {
         setIsSubmitting(true);
+
+        // Check if already in review
+        if (hasDocumentsInReview) {
+            toast.info("Belgeleriniz zaten inceleme aşamasında.");
+            setIsSubmitting(false);
+            return;
+        }
 
         let hasError = false;
 
@@ -224,12 +232,30 @@ export function DocumentUploadList({ initialDocuments }: { initialDocuments: any
             return;
         }
 
-        // Success Flow
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        toast.success("Belgeleriniz onaya gönderildi.");
-        setStep(FunnelStep.CONTRACT_APPROVAL);
-        router.push("/contract");
+        // Submit to server
+        try {
+            const result = await submitDocumentsForReview();
+
+            if (result.success) {
+                toast.success(result.message);
+                // Update local state to reflect reviewing status
+                setDocuments(prev => prev.map(doc =>
+                    doc.status === "uploaded" ? { ...doc, status: "reviewing" } : doc
+                ));
+                setStep(FunnelStep.CONTRACT_APPROVAL);
+                // Stay on page, don't navigate
+            } else {
+                toast.error(result.message);
+            }
+        } catch (error) {
+            toast.error("Bir hata oluştu. Lütfen tekrar deneyin.");
+        }
+
         setIsSubmitting(false);
+    };
+
+    const handleNextStep = () => {
+        router.push("/contract");
     };
 
     return (
@@ -274,15 +300,35 @@ export function DocumentUploadList({ initialDocuments }: { initialDocuments: any
             </div>
 
             <div className="flex justify-end pt-4 border-t">
-                <Button
-                    size="lg"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="bg-primary hover:bg-primary/90 w-full md:w-auto"
-                >
-                    <Send className="mr-2 h-4 w-4" />
-                    {isSubmitting ? "Kontrol Ediliyor..." : "Onaya Gönder"}
-                </Button>
+                {allDocumentsApproved ? (
+                    <Button
+                        size="lg"
+                        onClick={handleNextStep}
+                        className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
+                    >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Sonraki Adım
+                    </Button>
+                ) : (
+                    <Button
+                        size="lg"
+                        onClick={handleSubmit}
+                        disabled={isSubmitting || hasDocumentsInReview}
+                        className="bg-primary hover:bg-primary/90 w-full md:w-auto"
+                    >
+                        {hasDocumentsInReview ? (
+                            <>
+                                <Clock className="mr-2 h-4 w-4" />
+                                İncelemede
+                            </>
+                        ) : (
+                            <>
+                                <Send className="mr-2 h-4 w-4" />
+                                {isSubmitting ? "Kontrol Ediliyor..." : "Onaya Gönder"}
+                            </>
+                        )}
+                    </Button>
+                )}
             </div>
         </div>
     );

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { FileText, Download, Check, Loader2, User, Phone, MapPin } from "lucide-react";
+import { FileText, Download, Check, Loader2, User, Phone, MapPin, ArrowRight, Clock } from "lucide-react";
 import { useAppStore } from "@/lib/stores/useAppStore";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadContract, updateDocumentStatus } from "@/actions/documents";
+import { useRouter } from "next/navigation";
 
 interface ContractViewerProps {
     userName: string;
@@ -45,9 +46,12 @@ export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
     const universityName = selectedProgram?.university || "UNIVERISTY_PLACEHOLDER";
     const programName = selectedProgram?.name || "PROGRAM_PLACEHOLDER";
 
+    const router = useRouter();
+
     // Offline Signing State
     const isUploaded = contractDoc?.status === 'uploaded' || contractDoc?.status === 'approved' || contractDoc?.status === 'reviewing';
     const isReviewing = contractDoc?.status === 'reviewing';
+    const isApproved = contractDoc?.status === 'approved';
     const [localUploadedFileName, setLocalUploadedFileName] = useState<string | null>(contractDoc?.fileName || null);
 
     const handleDetailsSubmit = (e: React.FormEvent) => {
@@ -458,14 +462,32 @@ export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
                     </div>
                 </div>
 
-                {isUploaded && !isReviewing && (
+                {isApproved ? (
+                    <div className="mt-4 flex justify-end">
+                        <Button
+                            className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+                            onClick={() => router.push("/translation")}
+                        >
+                            <Check className="mr-2 h-4 w-4" />
+                            Onaylandı - Sonraki Adım
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </div>
+                ) : isReviewing ? (
+                    <div className="mt-4 flex justify-end">
+                        <Button className="w-full sm:w-auto" disabled>
+                            <Clock className="mr-2 h-4 w-4" />
+                            İncelemede
+                        </Button>
+                    </div>
+                ) : isUploaded ? (
                     <div className="mt-4 flex justify-end">
                         <Button className="w-full sm:w-auto bg-primary" onClick={handleSubmitForApproval}>
                             <Check className="mr-2 h-4 w-4" />
                             Onaya Gönder
                         </Button>
                     </div>
-                )}
+                ) : null}
             </Card>
         </div>
     );
