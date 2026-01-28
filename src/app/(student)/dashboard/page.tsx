@@ -21,10 +21,10 @@ export default function DashboardPage() {
         setMounted(true);
     }, []);
 
-    // Fetch document review status when step is 2
+    // Fetch document review status for steps that have documents (2, 3, 4)
     useEffect(() => {
-        if (currentStep === 2) {
-            getDocumentReviewStatus().then(result => {
+        if (currentStep >= 2 && currentStep <= 4) {
+            getDocumentReviewStatus(currentStep).then(result => {
                 setIsInReview(result.hasDocumentsInReview);
             });
         }
@@ -76,15 +76,22 @@ export default function DashboardPage() {
                 <div className="md:col-span-2 space-y-6">
 
                     {/* CTA Card for Next Step */}
-                    <div className={`p-8 rounded-2xl text-white shadow-xl relative overflow-hidden ${isInReview
-                        ? "bg-gradient-to-br from-yellow-500 to-yellow-700"
-                        : "bg-gradient-to-br from-primary to-orange-700"
+                    <div className={`p-8 rounded-2xl text-white shadow-xl relative overflow-hidden ${currentStep === 5
+                            ? "bg-gradient-to-br from-blue-500 to-blue-700"
+                            : isInReview
+                                ? "bg-gradient-to-br from-yellow-500 to-yellow-700"
+                                : "bg-gradient-to-br from-primary to-orange-700"
                         }`}>
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 pointer-events-none" />
 
                         <div className="relative z-10 space-y-4">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-sm backdrop-blur-sm">
-                                {isInReview ? (
+                                {currentStep === 5 ? (
+                                    <>
+                                        <Clock className="w-4 h-4 text-white" />
+                                        <span className="font-medium">Beklemede</span>
+                                    </>
+                                ) : isInReview ? (
                                     <>
                                         <Clock className="w-4 h-4 text-white" />
                                         <span className="font-medium">İnceleniyor</span>
@@ -98,17 +105,22 @@ export default function DashboardPage() {
                             </div>
                             <div>
                                 <h2 className="text-3xl font-bold mb-2">{currentLabel}</h2>
-                                <p className="text-orange-100 text-lg max-w-lg">
-                                    {isInReview
-                                        ? "Evraklarınız danışmanlarımız tarafından inceleniyor. Size en kısa sürede dönüş yapılacaktır."
-                                        : "Başvuru sürecini tamamlamak için bu adımı bitirmelisin."
+                                <p className={`text-lg max-w-lg ${currentStep === 5 ? "text-blue-100" : "text-orange-100"}`}>
+                                    {currentStep === 5
+                                        ? "Evraklarınızı üniversiteye ilettik. Üniversiteden dönüş bekleniyor. Bu işlem 15 güne kadar sürebilir."
+                                        : isInReview
+                                            ? "Evraklarınız danışmanlarımız tarafından inceleniyor. Size en kısa sürede dönüş yapılacaktır."
+                                            : "Başvuru sürecini tamamlamak için bu adımı bitirmelisin."
                                     }
                                 </p>
                             </div>
                             <div className="pt-2">
-                                <Button asChild size="lg" className="bg-white text-primary hover:bg-gray-100 font-bold border-0 cursor-pointer">
+                                <Button asChild size="lg" className={`font-bold border-0 cursor-pointer ${currentStep === 5
+                                        ? "bg-white text-blue-600 hover:bg-gray-100"
+                                        : "bg-white text-primary hover:bg-gray-100"
+                                    }`}>
                                     <Link href={nextPath}>
-                                        {isInReview ? "Evraklara Git" : "Devam Et"}
+                                        {currentStep === 5 ? "Durumu Görüntüle" : isInReview ? "Evraklara Git" : "Devam Et"}
                                         <ArrowRight className="ml-2 h-5 w-5" />
                                     </Link>
                                 </Button>

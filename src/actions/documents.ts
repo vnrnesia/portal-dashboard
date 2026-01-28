@@ -17,16 +17,29 @@ export async function getDocuments() {
     return docs;
 }
 
-export async function getDocumentReviewStatus() {
+export async function getDocumentReviewStatus(step?: number) {
     const session = await auth();
-    if (!session?.user?.id) return { hasDocumentsInReview: false };
+    if (!session?.user?.id) return { hasDocumentsInReview: false, allApproved: false };
 
     const docs = await db.query.documents.findMany({
         where: eq(documents.userId, session.user.id),
     });
 
-    const hasDocumentsInReview = docs.some(doc => doc.status === "reviewing");
-    const allApproved = docs.length > 0 && docs.every(doc => doc.status === "approved");
+    // Define which document types belong to which step
+    const stepDocTypes: Record<number, string[]> = {
+        2: ["passport", "diploma", "transcript", "biometric_photo"], // Documents
+        3: ["signed_contract"], // Contract
+        4: ["passport_translation", "diploma_translation", "transcript_translation"], // Translation
+    };
+
+    // If step is provided, filter by that step's document types
+    let relevantDocs = docs;
+    if (step && stepDocTypes[step]) {
+        relevantDocs = docs.filter(doc => stepDocTypes[step].includes(doc.type));
+    }
+
+    const hasDocumentsInReview = relevantDocs.some(doc => doc.status === "reviewing");
+    const allApproved = relevantDocs.length > 0 && relevantDocs.every(doc => doc.status === "approved");
 
     return { hasDocumentsInReview, allApproved };
 }
@@ -140,17 +153,30 @@ export async function deleteDocument(docId: string) {
     revalidatePath("/documents");
 }
 
-export async function submitDocumentsForReview() {
+export async function submitDocumentsForReview(step?: number) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
+
+    // Define which document types belong to which step
+    const stepDocTypes: Record<number, string[]> = {
+        2: ["passport", "diploma", "transcript", "biometric_photo"], // Documents
+        3: ["signed_contract"], // Contract
+        4: ["passport_translation", "diploma_translation", "transcript_translation"], // Translation
+    };
 
     // Get all user documents
     const userDocs = await db.query.documents.findMany({
         where: eq(documents.userId, session.user.id)
     });
 
-    // Check if any documents are already in reviewing or approved status
-    const hasReviewingOrApproved = userDocs.some(
+    // Filter by step if provided
+    let relevantDocs = userDocs;
+    if (step && stepDocTypes[step]) {
+        relevantDocs = userDocs.filter(doc => stepDocTypes[step].includes(doc.type));
+    }
+
+    // Check if any relevant documents are already in reviewing or approved status
+    const hasReviewingOrApproved = relevantDocs.some(
         doc => doc.status === "reviewing" || doc.status === "approved"
     );
 
@@ -159,21 +185,20 @@ export async function submitDocumentsForReview() {
     }
 
     // Check if all required documents are uploaded
-    const uploadedDocs = userDocs.filter(doc => doc.status === "uploaded");
+    const uploadedDocs = relevantDocs.filter(doc => doc.status === "uploaded");
     if (uploadedDocs.length === 0) {
         return { success: false, message: "Lütfen en az bir belge yükleyiniz." };
     }
 
-    // Update all uploaded documents to reviewing status
-    await db.update(documents)
-        .set({
-            status: "reviewing",
-            updatedAt: new Date()
-        })
-        .where(and(
-            eq(documents.userId, session.user.id),
-            eq(documents.status, "uploaded")
-        ));
+    // Update uploaded documents to reviewing status
+    for (const doc of uploadedDocs) {
+        await db.update(documents)
+            .set({
+                status: "reviewing",
+                updatedAt: new Date()
+            })
+            .where(eq(documents.id, doc.id));
+    }
 
     // Update user's stepApprovalStatus to indicate documents are in review
     await db.update(users)
@@ -185,6 +210,7 @@ export async function submitDocumentsForReview() {
 
     revalidatePath("/documents");
     revalidatePath("/contract");
+    revalidatePath("/translation");
     revalidatePath("/dashboard");
 
     return { success: true, message: "Belgeleriniz onaya gönderildi.", isInReview: true };
