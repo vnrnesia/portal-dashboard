@@ -1,8 +1,12 @@
 import { ContractViewer } from "@/components/documents/ContractViewer";
 import { auth } from "@/auth";
 import { getDocuments } from "@/actions/documents";
+import { requireStep } from "@/lib/step-protection";
 
 export default async function ContractPage() {
+    // Require Step 3 to access this page
+    await requireStep(3);
+
     const session = await auth();
     const docs = await getDocuments();
 
@@ -17,3 +21,4 @@ export default async function ContractPage() {
         </div>
     );
 }
+

@@ -2,8 +2,12 @@ import { DocumentUploadList } from "@/components/documents/DocumentUpload";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { getDocuments } from "@/actions/documents";
+import { requireStep } from "@/lib/step-protection";
 
 export default async function DocumentsPage() {
+    // Require Step 2 to access this page
+    await requireStep(2);
+
     const docs = await getDocuments();
 
     return (
