@@ -134,11 +134,19 @@ export function StudentDetailView({ student }: StudentDetailViewProps) {
                                                         </div>
                                                         <div>
                                                             <p className="font-medium">{doc.label}</p>
-                                                            <p className="text-xs text-muted-foreground">{doc.fileName}</p>
+                                                            <p className="text-xs text-muted-foreground">{doc.fileName || "Dosya yok"}</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        {doc.status === "pending" || doc.status === "reviewing" ? (
+                                                        {/* View File Button */}
+                                                        {doc.fileUrl && (
+                                                            <Button size="sm" variant="outline" asChild>
+                                                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                                                                    Dosyayı Gör
+                                                                </a>
+                                                            </Button>
+                                                        )}
+                                                        {doc.status === "pending" || doc.status === "uploaded" || doc.status === "reviewing" ? (
                                                             <>
                                                                 <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleDocStatus(doc.id, "approved")}>
                                                                     <CheckCircle2 className="h-4 w-4 mr-1" /> Onayla

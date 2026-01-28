@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, documents } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
@@ -13,7 +13,7 @@ export async function approveStudentStep(userId: string) {
         throw new Error("Unauthorized");
     }
 
-    // Approve current step and increment to next step
+    // Get user and their current step
     const user = await db.query.users.findFirst({
         where: eq(users.id, userId),
         columns: { onboardingStep: true }
@@ -23,8 +23,26 @@ export async function approveStudentStep(userId: string) {
         throw new Error("User not found");
     }
 
-    const newStep = Math.min((user.onboardingStep || 1) + 1, 6);
+    const currentStep = user.onboardingStep || 1;
 
+    // Step-specific validation
+    // Step 2: Documents - Check if at least some documents are uploaded
+    if (currentStep === 2) {
+        const userDocs = await db.query.documents.findMany({
+            where: eq(documents.userId, userId),
+        });
+
+        const uploadedDocs = userDocs.filter(d => d.fileUrl && d.fileUrl.length > 0);
+
+        if (uploadedDocs.length === 0) {
+            throw new Error("Öğrenci henüz belge yüklemedi. Onay verilemez.");
+        }
+    }
+
+    // Calculate new step
+    const newStep = Math.min(currentStep + 1, 6);
+
+    // Update user step
     await db.update(users)
         .set({
             stepApprovalStatus: "approved",
@@ -32,7 +50,7 @@ export async function approveStudentStep(userId: string) {
         })
         .where(eq(users.id, userId));
 
-    // Reset approval status to pending for the new step
+    // Reset approval status to pending for the new step (unless we're at final step)
     if (newStep < 6) {
         await db.update(users)
             .set({ stepApprovalStatus: "pending" })
