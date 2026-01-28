@@ -112,6 +112,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
         name?: string | null;
         email?: string | null;
         image?: string | null;
+        role?: "student" | "admin" | string;
         onboardingStep?: number;
     }
 }
@@ -193,6 +194,29 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+
+
+                {/* --- Admin Button Logic --- */}
+                {/* @ts-ignore */}
+                {
+                    user?.role === "admin" && (
+                        <SidebarGroup className="mt-auto border-t">
+                            <SidebarGroupContent>
+                                <SidebarMenu>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton asChild tooltip="Admin Dashboard" isActive={pathname.startsWith("/admin")}>
+                                            <Link href="/admin/dashboard">
+                                                <Settings2 />
+                                                <span>Admin Dashboard</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                </SidebarMenu>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+                    )
+                }
+
                 <SidebarGroup className="mt-auto">
                     <SidebarGroupContent>
                         <SidebarMenu>
@@ -209,11 +233,11 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
-            </SidebarContent>
+            </SidebarContent >
             <SidebarFooter>
                 <UserNav user={user} />
             </SidebarFooter>
             <SidebarRail />
-        </Sidebar>
+        </Sidebar >
     );
 }
