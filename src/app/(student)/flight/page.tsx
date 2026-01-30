@@ -47,7 +47,7 @@ export default async function FlightPage() {
                                     <p className="text-xs text-gray-500">{flightTicket.fileName}</p>
                                 </div>
                                 <Button variant="outline" size="sm" asChild>
-                                    <a href={flightTicket.fileUrl} target="_blank" rel="noopener noreferrer">Bileti İndir</a>
+                                    <a href={flightTicket.fileUrl || "#"} target="_blank" rel="noopener noreferrer">Bileti İndir</a>
                                 </Button>
                             </div>
 

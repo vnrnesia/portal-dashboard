@@ -142,6 +142,7 @@ export const documents = pgTable("document", {
     fileName: text("file_name"),
     fileUrl: text("file_url"),
     rejectionReason: text("rejection_reason"),
+    uploadSource: text("upload_source").default("web"), // 'web' or 'whatsapp'
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });
