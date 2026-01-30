@@ -40,19 +40,24 @@ export default async function StudentLayout({
                 ...session.user,
                 name: dbUser.name,
                 image: dbUser.image,
-                // @ts-ignore
-                onboardingStep: dbUser.onboardingStep,
-                // @ts-ignore
-                stepApprovalStatus: dbUser.stepApprovalStatus,
-                // @ts-ignore
-                role: dbUser.role
+                onboardingStep: dbUser.onboardingStep || 1,
+                stepApprovalStatus: dbUser.stepApprovalStatus || "pending",
+                role: dbUser.role || "student"
             };
         }
     }
 
     // Fallback user if something goes wrong (though middleware protects this)
     if (!user) {
-        user = { name: "Öğrenci", email: "guest@edu.com", image: "", onboardingStep: 1 };
+        user = {
+            id: "guest",
+            name: "Öğrenci",
+            email: "guest@edu.com",
+            image: "",
+            onboardingStep: 1,
+            role: "student",
+            stepApprovalStatus: "pending"
+        };
     }
 
     return (
