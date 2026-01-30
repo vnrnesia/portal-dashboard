@@ -1,12 +1,12 @@
 export const APPLICATION_STEPS = [
-    { id: 1, title: "Kayıt", label: "Kayıt İşlemleri" },
-    { id: 2, title: "Program", label: "Program Seçimi" },
-    { id: 3, title: "Evrak", label: "Evrak Yükleme" },
-    { id: 4, title: "Sözleşme", label: "Sözleşme Onayı" },
-    { id: 5, title: "Tercüme", label: "Tercüme İşlemleri" },
-    { id: 6, title: "Başvuru", label: "Üniversite Başvurusu" },
-    { id: 7, title: "Kabul & Vize", label: "Kabul ve Vize Süreci" },
-    { id: 8, title: "Uçuş", label: "Uçuş ve Karşılama" }
+    { id: 1, title: "Kayıt", label: "Kayıt İşlemleri", description: "Hesap oluşturma ve giriş işlemleri." },
+    { id: 2, title: "Program", label: "Program Seçimi", description: "Size en uygun üniversite ve bölümün belirlenmesi." },
+    { id: 3, title: "Evrak", label: "Evrak Yükleme", description: "Pasaport, diploma ve transkript gibi gerekli belgelerin yüklenmesi." },
+    { id: 4, title: "Sözleşme", label: "Sözleşme Onayı", description: "Hizmet sözleşmesinin incelenmesi ve imzalanması." },
+    { id: 5, title: "Tercüme", label: "Tercüme İşlemleri", description: "Belgelerinizin yeminli tercüme ve noter onay süreci." },
+    { id: 6, title: "Başvuru", label: "Üniversite Başvurusu", description: "Üniversiteye resmi başvurunun yapılması." },
+    { id: 7, title: "Kabul & Vize", label: "Kabul ve Vize Süreci", description: "Davet mektubunun gelmesi ve vize başvurusu." },
+    { id: 8, title: "Uçuş", label: "Uçuş ve Karşılama", description: "Uçak bileti organizasyonu ve havalimanı karşılaması." }
 ];
 
 export const STEP_REQUIREMENTS: Record<number, string[]> = {
