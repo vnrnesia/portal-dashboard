@@ -9,6 +9,18 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getDocumentReviewStatus } from "@/actions/documents";
+import { getNotifications } from "@/actions/notifications";
+import { formatDistanceToNow } from "date-fns";
+import { tr } from "date-fns/locale";
+
+interface Notification {
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    isRead: boolean | null;
+    createdAt: Date | null;
+}
 
 export default function DashboardPage() {
     const { data: session } = useSession();
@@ -18,9 +30,12 @@ export default function DashboardPage() {
     const [mounted, setMounted] = useState(false);
     const [isInReview, setIsInReview] = useState(false);
     const [isApproved, setIsApproved] = useState(false);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
 
     useEffect(() => {
         setMounted(true);
+        // Fetch notifications
+        getNotifications(4).then(setNotifications);
     }, []);
 
     // Fetch document review status for steps that have documents (2, 3, 4)
@@ -59,10 +74,6 @@ export default function DashboardPage() {
     const currentLabel = stepLabels[currentStep] || "Tamamlandı";
     const nextPath = nextStepLabels[currentStep] || "/dashboard";
 
-    const mockNotifications = [
-        { id: 1, text: "Evraklarınız incelenmeye alındı.", time: "2 saat önce", unread: true },
-        { id: 2, text: "Yeni program önerileri eklendi.", time: "1 gün önce", unread: false },
-    ];
 
     if (!mounted) return null;
 
@@ -179,17 +190,36 @@ export default function DashboardPage() {
                                     <Bell className="h-4 w-4" />
                                     Son Bildirimler
                                 </h3>
+                                <Link href="/notifications" className="text-xs text-primary hover:underline">
+                                    Tümünü Gör
+                                </Link>
                             </div>
                             <div className="space-y-3">
-                                {mockNotifications.map((notif) => (
-                                    <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                                        <div className={`w-2 h-2 mt-2 rounded-full ${notif.unread ? 'bg-red-500' : 'bg-gray-300'}`} />
-                                        <div className="flex-1">
-                                            <p className="text-sm text-gray-900">{notif.text}</p>
-                                            <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
-                                        </div>
+                                {notifications.length === 0 ? (
+                                    <div className="text-center py-4 text-muted-foreground text-sm">
+                                        Henüz bildirim yok
                                     </div>
-                                ))}
+                                ) : (
+                                    notifications.map((notif) => (
+                                        <Link
+                                            key={notif.id}
+                                            href="/notifications"
+                                            className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                                        >
+                                            <div className={`w-2 h-2 mt-2 rounded-full ${!notif.isRead ? 'bg-red-500' : 'bg-gray-300'}`} />
+                                            <div className="flex-1">
+                                                <p className="text-sm text-gray-900 font-medium">{notif.title}</p>
+                                                <p className="text-xs text-gray-600 line-clamp-1">{notif.message}</p>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    {notif.createdAt && formatDistanceToNow(
+                                                        new Date(notif.createdAt),
+                                                        { addSuffix: true, locale: tr }
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </Link>
+                                    ))
+                                )}
                             </div>
                         </div>
 

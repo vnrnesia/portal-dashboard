@@ -5,6 +5,14 @@ import type { AdapterAccount } from "next-auth/adapters";
 export const roleEnum = pgEnum("role", ["student", "admin"]);
 export const docStatusEnum = pgEnum("doc_status", ["pending", "uploaded", "reviewing", "approved", "rejected"]);
 export const stepApprovalStatusEnum = pgEnum("step_approval_status", ["pending", "approved", "rejected"]);
+export const notificationTypeEnum = pgEnum("notification_type", [
+    "step_completed",
+    "document_approved",
+    "document_rejected",
+    "document_uploaded",
+    "application_update",
+    "general"
+]);
 
 // Users Table
 export const users = pgTable("user", {
@@ -138,12 +146,25 @@ export const documents = pgTable("document", {
     updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Notifications Table
+export const notifications = pgTable("notification", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    type: notificationTypeEnum("type").notNull(),
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    isRead: boolean("is_read").default(false),
+    data: jsonb("data"), // Additional data like document ID, step number, etc.
+    createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 import { relations } from "drizzle-orm";
 
 export const usersRelations = relations(users, ({ many }) => ({
     documents: many(documents),
     applications: many(applications),
+    notifications: many(notifications),
 }));
 
 export const documentsRelations = relations(documents, ({ one }) => ({
@@ -161,5 +182,28 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
     program: one(programs, {
         fields: [applications.programId],
         references: [programs.id],
+    }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+    user: one(users, {
+        fields: [notifications.userId],
+        references: [users.id],
+    }),
+}));
+
+// Magic Links Table
+export const magicLinks = pgTable("magic_link", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    token: text("token").notNull().unique(), // stored as plain text token (random uuid)
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const magicLinksRelations = relations(magicLinks, ({ one }) => ({
+    user: one(users, {
+        fields: [magicLinks.userId],
+        references: [users.id],
     }),
 }));

@@ -7,9 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, XCircle, FileText, ArrowLeft, ArrowRight, Truck, Info } from "lucide-react";
+import { CheckCircle2, XCircle, FileText, ArrowLeft, ArrowRight, Truck, Info, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 import { APPLICATION_STEPS, STEP_REQUIREMENTS } from "@/lib/constants";
 
@@ -23,6 +27,11 @@ export function StudentDetailView({ student }: StudentDetailViewProps) {
     // Use constants instead of local definition
 
 
+    const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+    const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+    const [rejectionReason, setRejectionReason] = useState("");
+    const [isRejecting, setIsRejecting] = useState(false);
+
     const handleStepChange = async (newStep: number) => {
         try {
             await updateStudentStep(student.id, newStep);
@@ -33,13 +42,31 @@ export function StudentDetailView({ student }: StudentDetailViewProps) {
         }
     };
 
-    const handleDocStatus = async (docId: string, status: "approved" | "rejected") => {
+    const handleDocStatus = async (docId: string, status: "approved" | "rejected", reason?: string) => {
         try {
-            await updateDocumentStatus(docId, status);
+            await updateDocumentStatus(docId, status, reason);
             toast.success(`Belge durumu: ${status === "approved" ? "Onaylandı" : "Reddedildi"}`);
             router.refresh();
         } catch (error) {
             toast.error("Hata oluştu.");
+        }
+    };
+
+    const openRejectDialog = (docId: string) => {
+        setSelectedDocId(docId);
+        setRejectionReason("");
+        setRejectDialogOpen(true);
+    };
+
+    const confirmRejection = async () => {
+        if (!selectedDocId) return;
+        setIsRejecting(true);
+        try {
+            await handleDocStatus(selectedDocId, "rejected", rejectionReason);
+            setRejectDialogOpen(false);
+        } finally {
+            setIsRejecting(false);
+            setSelectedDocId(null);
         }
     };
 
@@ -162,53 +189,66 @@ export function StudentDetailView({ student }: StudentDetailViewProps) {
                                 <CardContent>
                                     {student.documents && student.documents.length > 0 ? (
                                         <div className="space-y-4">
-                                            {student.documents.map((doc: any) => (
-                                                <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 bg-blue-50 rounded-lg">
-                                                            <FileText className="h-5 w-5 text-blue-600" />
+                                            {[...student.documents]
+                                                .sort((a: any, b: any) => {
+                                                    const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                                                    const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                                                    return dateB - dateA; // Newest first
+                                                })
+                                                .map((doc: any) => (
+                                                    <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="p-2 bg-blue-50 rounded-lg">
+                                                                <FileText className="h-5 w-5 text-blue-600" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium">{doc.label}</p>
+                                                                <p className="text-xs text-muted-foreground">{doc.fileName || "Dosya yok"}</p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="font-medium">{doc.label}</p>
-                                                            <p className="text-xs text-muted-foreground">{doc.fileName || "Dosya yok"}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            {/* View File Button */}
+                                                            {doc.fileUrl && (
+                                                                <Button size="sm" variant="outline" asChild>
+                                                                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                                                                        Dosyayı Gör
+                                                                    </a>
+                                                                </Button>
+                                                            )}
+                                                            {doc.status === "pending" || doc.status === "uploaded" || doc.status === "reviewing" ? (
+                                                                <>
+                                                                    <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleDocStatus(doc.id, "approved")}>
+                                                                        <CheckCircle2 className="h-4 w-4 mr-1" /> Onayla
+                                                                    </Button>
+                                                                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => openRejectDialog(doc.id)}>
+                                                                        <XCircle className="h-4 w-4 mr-1" /> Reddet
+                                                                    </Button>
+                                                                </>
+                                                            ) : doc.status === "approved" ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <Badge variant="default">Onaylandı</Badge>
+                                                                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => openRejectDialog(doc.id)}>
+                                                                        <XCircle className="h-4 w-4 mr-1" /> Reddet
+                                                                    </Button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Badge variant="destructive">Reddedildi</Badge>
+                                                                        <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleDocStatus(doc.id, "approved")}>
+                                                                            <CheckCircle2 className="h-4 w-4 mr-1" /> Onayla
+                                                                        </Button>
+                                                                    </div>
+                                                                    {doc.rejectionReason && (
+                                                                        <p className="text-xs text-red-600 max-w-[200px] text-right">
+                                                                            Sebep: {doc.rejectionReason}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {/* View File Button */}
-                                                        {doc.fileUrl && (
-                                                            <Button size="sm" variant="outline" asChild>
-                                                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
-                                                                    Dosyayı Gör
-                                                                </a>
-                                                            </Button>
-                                                        )}
-                                                        {doc.status === "pending" || doc.status === "uploaded" || doc.status === "reviewing" ? (
-                                                            <>
-                                                                <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleDocStatus(doc.id, "approved")}>
-                                                                    <CheckCircle2 className="h-4 w-4 mr-1" /> Onayla
-                                                                </Button>
-                                                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDocStatus(doc.id, "rejected")}>
-                                                                    <XCircle className="h-4 w-4 mr-1" /> Reddet
-                                                                </Button>
-                                                            </>
-                                                        ) : doc.status === "approved" ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <Badge variant="default">Onaylandı</Badge>
-                                                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDocStatus(doc.id, "rejected")}>
-                                                                    <XCircle className="h-4 w-4 mr-1" /> Reddet
-                                                                </Button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-2">
-                                                                <Badge variant="destructive">Reddedildi</Badge>
-                                                                <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleDocStatus(doc.id, "approved")}>
-                                                                    <CheckCircle2 className="h-4 w-4 mr-1" /> Onayla
-                                                                </Button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ))}
                                         </div>
                                     ) : (
                                         <div className="text-center py-8 text-muted-foreground">
@@ -282,31 +322,54 @@ export function StudentDetailView({ student }: StudentDetailViewProps) {
                                             ) : null}
 
                                             {/* Upload Form - Always visible to allow re-upload/replace logic if we handle it */}
-                                            <form action={async (formData) => {
-                                                const { uploadAdminContract } = await import("@/actions/admin/upload-contract");
-                                                const res = await uploadAdminContract(student.id, formData);
-                                                if (res.success) {
-                                                    toast.success(res.message);
-                                                    router.refresh();
-                                                } else {
-                                                    toast.error(res.message);
+                                            {/* Upload Form - Enable only if student uploaded signed contract */}
+                                            {(() => {
+                                                const signedContract = student.documents?.find((d: any) => d.type === "signed_contract");
+
+                                                if (!signedContract) {
+                                                    return (
+                                                        <div className="flex items-center gap-3 p-4 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200">
+                                                            <div className="p-2 bg-yellow-100 rounded-full">
+                                                                <Clock className="w-5 h-5 text-yellow-600" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium">Bekleniyor: İmzalı Sözleşme</p>
+                                                                <p className="text-sm opacity-90">
+                                                                    Öğrenci henüz imzalı sözleşmeyi sisteme yüklemedi. Yükleme yapıldığında buradan onaylı sözleşmeyi yükleyebilirsiniz.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    );
                                                 }
-                                            }} className="flex gap-4 items-end">
-                                                <div className="grid w-full max-w-sm items-center gap-1.5">
-                                                    <label htmlFor="adminContract" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                                        Sözleşme Seç (PDF)
-                                                    </label>
-                                                    <input
-                                                        id="adminContract"
-                                                        name="file"
-                                                        type="file"
-                                                        accept=".pdf"
-                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                        required
-                                                    />
-                                                </div>
-                                                <Button type="submit">Yükle</Button>
-                                            </form>
+
+                                                return (
+                                                    <form action={async (formData) => {
+                                                        const { uploadAdminContract } = await import("@/actions/admin/upload-contract");
+                                                        const res = await uploadAdminContract(student.id, formData);
+                                                        if (res.success) {
+                                                            toast.success(res.message);
+                                                            router.refresh();
+                                                        } else {
+                                                            toast.error(res.message);
+                                                        }
+                                                    }} className="flex gap-4 items-end">
+                                                        <div className="grid w-full max-w-sm items-center gap-1.5">
+                                                            <label htmlFor="adminContract" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                                                Onaylı Sözleşme Yükle (PDF)
+                                                            </label>
+                                                            <input
+                                                                id="adminContract"
+                                                                name="file"
+                                                                type="file"
+                                                                accept=".pdf"
+                                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <Button type="submit">Yükle ve Onayla</Button>
+                                                    </form>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </CardContent>
@@ -337,36 +400,60 @@ export function StudentDetailView({ student }: StudentDetailViewProps) {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <Button variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => handleDocStatus(student.documents.find((d: any) => d.type === "invitation_letter").id, "rejected")}>
+                                                    <Button variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => openRejectDialog(student.documents.find((d: any) => d.type === "invitation_letter").id)}>
                                                         Kaldır
                                                     </Button>
                                                 </div>
                                             ) : (
-                                                <form action={async (formData) => {
-                                                    const { uploadInvitationLetter } = await import("@/actions/admin/upload-invitation");
-                                                    const res = await uploadInvitationLetter(student.id, formData);
-                                                    if (res.success) {
-                                                        toast.success(res.message);
-                                                        router.refresh();
-                                                    } else {
-                                                        toast.error(res.message);
+                                                (() => {
+                                                    const hasApprovedTranslations = student.documents?.some((d: any) =>
+                                                        d.type.startsWith("translated_") && d.status === "approved"
+                                                    ) || student.onboardingStep > 5;
+
+                                                    if (!hasApprovedTranslations) {
+                                                        return (
+                                                            <div className="flex items-center gap-3 p-4 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200">
+                                                                <div className="p-2 bg-yellow-100 rounded-full">
+                                                                    <Clock className="w-5 h-5 text-yellow-600" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-medium">Bekleniyor: Onaylı Tercüme</p>
+                                                                    <p className="text-sm opacity-90">
+                                                                        Öğrencinin tercüme edilmiş evrakları henüz onaylanmamış. Davet mektubu yüklemeden önce tercüme süreci tamamlanmalıdır.
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        );
                                                     }
-                                                }} className="flex gap-4 items-end">
-                                                    <div className="grid w-full max-w-sm items-center gap-1.5">
-                                                        <label htmlFor="invitation" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                                            Dosya Seç
-                                                        </label>
-                                                        <input
-                                                            id="invitation"
-                                                            name="file"
-                                                            type="file"
-                                                            accept=".pdf,.png,.jpg,.jpeg"
-                                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <Button type="submit">Yükle</Button>
-                                                </form>
+
+                                                    return (
+                                                        <form action={async (formData) => {
+                                                            const { uploadInvitationLetter } = await import("@/actions/admin/upload-invitation");
+                                                            const res = await uploadInvitationLetter(student.id, formData);
+                                                            if (res.success) {
+                                                                toast.success(res.message);
+                                                                router.refresh();
+                                                            } else {
+                                                                toast.error(res.message);
+                                                            }
+                                                        }} className="flex gap-4 items-end">
+                                                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                                                                <label htmlFor="invitation" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                                                    Dosya Seç
+                                                                </label>
+                                                                <input
+                                                                    id="invitation"
+                                                                    name="file"
+                                                                    type="file"
+                                                                    accept=".pdf,.png,.jpg,.jpeg"
+                                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    required
+                                                                />
+                                                            </div>
+                                                            <Button type="submit">Yükle</Button>
+                                                        </form>
+                                                    );
+                                                })()
                                             )}
                                         </div>
                                     </div>
@@ -446,31 +533,54 @@ export function StudentDetailView({ student }: StudentDetailViewProps) {
                                                     </Button>
                                                 </div>
                                             ) : (
-                                                <form action={async (formData) => {
-                                                    const { uploadFlightTicket } = await import("@/actions/admin/upload-flight-ticket");
-                                                    const res = await uploadFlightTicket(student.id, formData);
-                                                    if (res.success) {
-                                                        toast.success(res.message);
-                                                        router.refresh();
-                                                    } else {
-                                                        toast.error(res.message);
+                                                (() => {
+                                                    // Flight ticket requires invitation letter/visa process
+                                                    const hasInvitation = student.documents?.some((d: any) => d.type === "invitation_letter");
+
+                                                    if (!hasInvitation) {
+                                                        return (
+                                                            <div className="flex items-center gap-3 p-4 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200">
+                                                                <div className="p-2 bg-yellow-100 rounded-full">
+                                                                    <Clock className="w-5 h-5 text-yellow-600" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-medium">Bekleniyor: Davet Mektubu</p>
+                                                                    <p className="text-sm opacity-90">
+                                                                        Davet mektubu yüklenmeden (Kabul süreci tamamlanmadan) uçuş bileti yüklenemez.
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        );
                                                     }
-                                                }} className="flex gap-4 items-end">
-                                                    <div className="grid w-full max-w-sm items-center gap-1.5">
-                                                        <label htmlFor="flightTicket" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                                            Bilet Seç (PDF/Resim)
-                                                        </label>
-                                                        <input
-                                                            id="flightTicket"
-                                                            name="file"
-                                                            type="file"
-                                                            accept=".pdf,.png,.jpg,.jpeg"
-                                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <Button type="submit">Yükle</Button>
-                                                </form>
+
+                                                    return (
+                                                        <form action={async (formData) => {
+                                                            const { uploadFlightTicket } = await import("@/actions/admin/upload-flight-ticket");
+                                                            const res = await uploadFlightTicket(student.id, formData);
+                                                            if (res.success) {
+                                                                toast.success(res.message);
+                                                                router.refresh();
+                                                            } else {
+                                                                toast.error(res.message);
+                                                            }
+                                                        }} className="flex gap-4 items-end">
+                                                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                                                                <label htmlFor="flightTicket" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                                                    Bilet Seç (PDF/Resim)
+                                                                </label>
+                                                                <input
+                                                                    id="flightTicket"
+                                                                    name="file"
+                                                                    type="file"
+                                                                    accept=".pdf,.png,.jpg,.jpeg"
+                                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    required
+                                                                />
+                                                            </div>
+                                                            <Button type="submit">Yükle</Button>
+                                                        </form>
+                                                    );
+                                                })()
                                             )}
                                         </div>
                                     </div>
@@ -485,6 +595,35 @@ export function StudentDetailView({ student }: StudentDetailViewProps) {
                     </Tabs>
                 </div>
             </div>
-        </div>
+            {/* Rejection Dialog */}
+            <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Belgeyi Reddet</DialogTitle>
+                        <DialogDescription>
+                            Bu belgeyi neden reddettiğinizi öğrenciye açıklayın. Bu mesaj WhatsApp üzerinden de iletilecektir.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="reason">Red Sebebi</Label>
+                            <Textarea
+                                id="reason"
+                                placeholder="Örn: Belge okunaklı değil, lütfen tekrar yükleyin."
+                                value={rejectionReason}
+                                onChange={(e) => setRejectionReason(e.target.value)}
+                                rows={4}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>İptal</Button>
+                        <Button variant="destructive" onClick={confirmRejection} disabled={isRejecting || !rejectionReason.trim()}>
+                            {isRejecting ? "İşleniyor..." : "Reddet"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 }

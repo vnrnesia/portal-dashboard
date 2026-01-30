@@ -23,6 +23,17 @@ export async function uploadFlightTicket(userId: string, formData: FormData) {
             return { success: false, message: "Dosya bulunamadı." };
         }
 
+        // Check for invitation letter
+        const studentDocs = await db.query.documents.findMany({
+            where: eq(documents.userId, userId)
+        });
+
+        const hasInvitation = studentDocs.some(d => d.type === "invitation_letter");
+
+        if (!hasInvitation) {
+            return { success: false, message: "Davet mektubu yüklenmeden (Kabul süreci tamamlanmadan) uçuş bileti yüklenemez." };
+        }
+
         // File upload logic
         const uploadDir = join(process.cwd(), "public", "uploads");
         await mkdir(uploadDir, { recursive: true });

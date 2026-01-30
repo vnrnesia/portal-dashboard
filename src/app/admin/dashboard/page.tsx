@@ -1,158 +1,158 @@
-import { getStudents } from "@/actions/admin/get-students";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { getDashboardStats } from "@/actions/admin/get-students";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
-import { Eye, Clock, CheckCircle2, AlertCircle } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ApproveButton } from "@/components/admin/ApproveButton";
+import { Users, TrendingUp, FileCheck, Clock, GraduationCap, CalendarPlus } from "lucide-react";
+import { APPLICATION_STEPS } from "@/lib/constants";
 
 export default async function AdminDashboardPage() {
-    const students = await getStudents();
+    const stats = await getDashboardStats();
 
-    // Mapping steps to labels
-    const stepLabels: Record<number, string> = {
-        1: "Program Seçimi",
-        2: "Evrak Toplama",
-        3: "Sözleşme Onayı",
-        4: "Yeminli Tercüme",
-        5: "Başvuru",
-        6: "Uçuş",
-    };
-
-    // Filter students pending approval
-    const pendingApprovals = students.filter(s => s.stepApprovalStatus === "pending");
+    const statCards = [
+        {
+            title: "Toplam Öğrenci",
+            value: stats.totalStudents,
+            icon: Users,
+            description: "Kayıtlı toplam öğrenci sayısı",
+            color: "text-blue-600",
+            bgColor: "bg-blue-50",
+        },
+        {
+            title: "Aktif Başvurular",
+            value: stats.activeApplications,
+            icon: TrendingUp,
+            description: "İşlem devam eden öğrenciler",
+            color: "text-orange-600",
+            bgColor: "bg-orange-50",
+        },
+        {
+            title: "Tamamlanan",
+            value: stats.completedStudents,
+            icon: GraduationCap,
+            description: "Süreci tamamlayan öğrenciler",
+            color: "text-green-600",
+            bgColor: "bg-green-50",
+        },
+        {
+            title: "Bu Hafta Yeni",
+            value: stats.newStudentsThisWeek,
+            icon: CalendarPlus,
+            description: "Son 7 günde kayıt",
+            color: "text-purple-600",
+            bgColor: "bg-purple-50",
+        },
+        {
+            title: "Bekleyen Belgeler",
+            value: stats.pendingDocuments,
+            icon: Clock,
+            description: "Onay bekleyen belgeler",
+            color: "text-amber-600",
+            bgColor: "bg-amber-50",
+        },
+    ];
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Öğrenci Yönetimi</h1>
-                    <p className="text-muted-foreground">
-                        Kayıtlı öğrencilerin durumlarını buradan takip edebilirsiniz.
-                    </p>
-                </div>
-                <Button>Yeni Öğrenci Ekle (Manuel)</Button>
+        <div className="space-y-8">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                <p className="text-muted-foreground">
+                    Öğrenci başvuru süreçlerinin genel görünümü
+                </p>
             </div>
 
-            {/* Pending Approvals Section */}
-            {pendingApprovals.length > 0 && (
-                <Card className="border-orange-200 bg-orange-50">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-orange-700">
-                            <AlertCircle className="h-5 w-5" />
-                            Bekleyen Onaylar ({pendingApprovals.length})
-                        </CardTitle>
-                        <CardDescription>Bu öğrenciler bir sonraki adıma geçmek için onayınızı bekliyor.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-3">
-                            {pendingApprovals.map((student) => (
-                                <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="h-10 w-10">
-                                            <AvatarImage src={student.image || ""} />
-                                            <AvatarFallback>{student.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-medium">{student.name}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                Mevcut Adım: {stepLabels[student.onboardingStep || 1]}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <ApproveButton userId={student.id} />
-                                        <Button asChild size="sm" variant="outline">
-                                            <Link href={`/admin/users/${student.id}`}>
-                                                <Eye className="h-4 w-4 mr-1" /> Detay
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+            {/* Stats Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                {statCards.map((stat) => (
+                    <Card key={stat.title}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                {stat.title}
+                            </CardTitle>
+                            <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold">{stat.value}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                {stat.description}
+                            </p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
 
-            {/* All Students Table */}
-            <div className="rounded-md border bg-white">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Öğrenci</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Durum</TableHead>
-                            <TableHead>Mevcut Aşama</TableHead>
-                            <TableHead>Onay Durumu</TableHead>
-                            <TableHead className="text-right">İşlemler</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {students.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
-                                    Henüz kayıtlı öğrenci yok.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            students.map((student) => (
-                                <TableRow key={student.id}>
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src={student.image || ""} />
-                                                <AvatarFallback>{student.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                            </Avatar>
-                                            {student.name}
+            {/* Step Distribution */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Aşama Dağılımı</CardTitle>
+                    <CardDescription>Her aşamadaki öğrenci sayısı</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-8">
+                        {APPLICATION_STEPS.map((step) => {
+                            const count = stats.stepDistribution[step.id] || 0;
+                            const percentage = stats.totalStudents > 0
+                                ? Math.round((count / stats.totalStudents) * 100)
+                                : 0;
+
+                            return (
+                                <a
+                                    key={step.id}
+                                    href={`/admin/users?step=${step.id}`}
+                                    className="block"
+                                >
+                                    <div className="flex flex-col items-center p-4 rounded-lg border bg-card hover:shadow-md hover:border-primary/50 transition-all cursor-pointer">
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                                            <span className="text-lg font-bold text-primary">{step.id}</span>
                                         </div>
-                                    </TableCell>
-                                    <TableCell>{student.email}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={student.emailVerified ? "default" : "secondary"}>
-                                            {student.emailVerified ? "Onaylı" : "Beklemede"}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                                                {stepLabels[student.onboardingStep || 1] || "Bilinmiyor"}
-                                            </Badge>
+                                        <span className="text-2xl font-bold">{count}</span>
+                                        <span className="text-xs text-muted-foreground text-center mt-1">
+                                            {step.title}
+                                        </span>
+                                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                                            <div
+                                                className="bg-primary h-1.5 rounded-full transition-all"
+                                                style={{ width: `${percentage}%` }}
+                                            />
                                         </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant={
-                                                student.stepApprovalStatus === "approved" ? "default" :
-                                                    student.stepApprovalStatus === "rejected" ? "destructive" : "secondary"
-                                            }
-                                        >
-                                            {student.stepApprovalStatus === "approved" ? "Onaylı" :
-                                                student.stepApprovalStatus === "rejected" ? "Reddedildi" : "Bekliyor"}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button asChild size="sm" variant="ghost">
-                                            <Link href={`/admin/users/${student.id}`}>
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                İncele
-                                            </Link>
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                                        <span className="text-xs text-muted-foreground mt-1">
+                                            {percentage}%
+                                        </span>
+                                    </div>
+                                </a>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Quick Links */}
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                    <a href="/admin/users">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Users className="h-5 w-5 text-blue-600" />
+                                Öğrenci Listesi
+                            </CardTitle>
+                            <CardDescription>
+                                Tüm öğrencileri görüntüle ve yönet
+                            </CardDescription>
+                        </CardHeader>
+                    </a>
+                </Card>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                    <a href="/admin/users">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <FileCheck className="h-5 w-5 text-green-600" />
+                                Belge İncele
+                            </CardTitle>
+                            <CardDescription>
+                                Bekleyen belgeleri incele ve onayla
+                            </CardDescription>
+                        </CardHeader>
+                    </a>
+                </Card>
             </div>
         </div>
     );

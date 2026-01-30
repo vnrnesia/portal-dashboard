@@ -21,6 +21,17 @@ export async function uploadAdminContract(userId: string, formData: FormData) {
         return { success: false, message: "Dosya bulunamadı." };
     }
 
+    // Check if student has uploaded a signed contract
+    const studentDocs = await db.query.documents.findMany({
+        where: eq(documents.userId, userId)
+    });
+
+    const hasSignedContract = studentDocs.some(d => d.type === "signed_contract");
+
+    if (!hasSignedContract) {
+        return { success: false, message: "Öğrenci imzalı sözleşmeyi sisteme yüklemeden onaylı sözleşme yükleyemezsiniz." };
+    }
+
     try {
         const fileName = file.name;
         const fileUrl = `/mock-uploads/${fileName}`;

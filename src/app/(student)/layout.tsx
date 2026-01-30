@@ -23,9 +23,37 @@ export default async function StudentLayout({
     children: React.ReactNode
 }) {
     const session = await auth();
+    let user = session?.user;
+
+    // Fetch fresh user data from DB to ensure name and step are up to date
+    if (session?.user?.id) {
+        const { db } = await import("@/db");
+        const { users } = await import("@/db/schema");
+        const { eq } = await import("drizzle-orm");
+
+        const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, session.user.id),
+        });
+
+        if (dbUser) {
+            user = {
+                ...session.user,
+                name: dbUser.name,
+                image: dbUser.image,
+                // @ts-ignore
+                onboardingStep: dbUser.onboardingStep,
+                // @ts-ignore
+                stepApprovalStatus: dbUser.stepApprovalStatus,
+                // @ts-ignore
+                role: dbUser.role
+            };
+        }
+    }
 
     // Fallback user if something goes wrong (though middleware protects this)
-    const user = session?.user || { name: "Öğrenci", email: "guest@edu.com", image: "", onboardingStep: 1 };
+    if (!user) {
+        user = { name: "Öğrenci", email: "guest@edu.com", image: "", onboardingStep: 1 };
+    }
 
     return (
         <SidebarProvider>

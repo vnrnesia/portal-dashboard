@@ -89,6 +89,7 @@ export async function uploadContract(fileName: string, fileUrl: string) {
                 status: "uploaded",
                 fileName,
                 fileUrl,
+                rejectionReason: null, // Clear rejection reason
                 updatedAt: new Date()
             })
             .where(eq(documents.id, existing.id));
@@ -99,7 +100,8 @@ export async function uploadContract(fileName: string, fileUrl: string) {
             label: "İmzalı Sözleşme",
             status: "uploaded",
             fileName,
-            fileUrl
+            fileUrl,
+            rejectionReason: null
         });
     }
 
@@ -125,6 +127,7 @@ export async function uploadDocument(type: string, fileName: string, fileUrl: st
                 status: "uploaded",
                 fileName,
                 fileUrl,
+                rejectionReason: null, // Clear rejection reason on new upload
                 updatedAt: new Date()
             })
             .where(eq(documents.id, existing.id));
@@ -136,7 +139,8 @@ export async function uploadDocument(type: string, fileName: string, fileUrl: st
             label,
             status: "uploaded",
             fileName,
-            fileUrl
+            fileUrl,
+            rejectionReason: null // Ensure it's null on insert (though default is null)
         }).returning({ id: documents.id });
         docId = newDoc.id;
     }

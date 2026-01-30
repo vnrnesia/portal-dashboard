@@ -85,9 +85,11 @@ export function UserNav({ user }: UserNavProps) {
                                     Profil
                                 </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <Bell className="mr-2 h-4 w-4" />
-                                Bildirimler
+                            <DropdownMenuItem asChild>
+                                <Link href="/notifications">
+                                    <Bell className="mr-2 h-4 w-4" />
+                                    Bildirimler
+                                </Link>
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />

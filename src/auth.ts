@@ -63,6 +63,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return null;
       },
     }),
+    Credentials({
+      id: "magic-token",
+      name: "Magic Token",
+      credentials: {
+        token: { label: "Token", type: "text" }
+      },
+      authorize: async (credentials) => {
+        const token = credentials?.token as string;
+        if (!token) return null;
+
+        const { magicLinks, users } = await import("@/db/schema");
+        const { eq, and, gt } = await import("drizzle-orm");
+
+        // Find valid token
+        const magicLink = await db.query.magicLinks.findFirst({
+          where: and(
+            eq(magicLinks.token, token),
+            gt(magicLinks.expiresAt, new Date())
+          ),
+          with: {
+            user: true
+          }
+        });
+
+        if (!magicLink || !magicLink.user) return null;
+
+        // Delete token after use (One-time use)
+        await db.delete(magicLinks).where(eq(magicLinks.id, magicLink.id));
+
+        return {
+          id: magicLink.user.id,
+          name: magicLink.user.name,
+          email: magicLink.user.email,
+          picture: magicLink.user.image,
+          role: magicLink.user.role || "student",
+          onboardingStep: magicLink.user.onboardingStep || 1,
+        };
+      }
+    }),
   ],
   callbacks: {
     ...authConfig.callbacks,

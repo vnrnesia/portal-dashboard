@@ -21,6 +21,25 @@ export async function uploadInvitationLetter(userId: string, formData: FormData)
             return { success: false, message: "Dosya bulunamadı." };
         }
 
+        // Check for approved translation documents
+        const studentDocs = await db.query.documents.findMany({
+            where: eq(documents.userId, userId)
+        });
+
+        // Get user for step check
+        const userCheck = await db.query.users.findFirst({
+            where: eq(users.id, userId),
+            columns: { onboardingStep: true }
+        });
+
+        const hasApprovedTranslations = studentDocs.some(d =>
+            d.type.startsWith("translated_") && d.status === "approved"
+        ) || (userCheck?.onboardingStep || 0) > 5;
+
+        if (!hasApprovedTranslations) {
+            return { success: false, message: "Öğrencinin onaylı tercüme evrakları bulunmadan davet mektubu yüklenemez." };
+        }
+
         const fileName = file.name;
         const fileUrl = `/uploads/${fileName}`;
 
