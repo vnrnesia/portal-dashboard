@@ -1,0 +1,78 @@
+"use server";
+
+import { db } from "@/db";
+import { documents, users } from "@/db/schema";
+import { revalidatePath } from "next/cache";
+import { eq, and } from "drizzle-orm";
+import { auth } from "@/auth";
+
+// Step 6 (Başvuru) -> Step 7 (Kabul & Vize) when invitation letter uploaded
+const STEP_AFTER_INVITATION = 7;
+
+export async function uploadInvitationLetter(userId: string, formData: FormData) {
+    try {
+        const session = await auth();
+        if (session?.user?.role !== "admin") {
+            return { success: false, message: "Yetkisiz işlem." };
+        }
+
+        const file = formData.get("file") as File;
+        if (!file) {
+            return { success: false, message: "Dosya bulunamadı." };
+        }
+
+        const fileName = file.name;
+        const fileUrl = `/uploads/${fileName}`;
+
+        // Check if invitation letter already exists
+        const existingDoc = await db.query.documents.findFirst({
+            where: and(
+                eq(documents.userId, userId),
+                eq(documents.type, "invitation_letter")
+            )
+        });
+
+        if (existingDoc) {
+            await db.update(documents)
+                .set({
+                    fileName,
+                    fileUrl,
+                    updatedAt: new Date(),
+                    status: "approved"
+                })
+                .where(eq(documents.id, existingDoc.id));
+        } else {
+            await db.insert(documents).values({
+                userId,
+                type: "invitation_letter",
+                label: "Davet Mektubu",
+                fileName,
+                fileUrl,
+                status: "approved"
+            });
+        }
+
+        // Get current user step
+        const user = await db.query.users.findFirst({
+            where: eq(users.id, userId),
+            columns: { onboardingStep: true }
+        });
+
+        // Auto-advance to next step if user is on step 6 (Başvuru)
+        if (user && user.onboardingStep === 6) {
+            await db.update(users)
+                .set({ onboardingStep: STEP_AFTER_INVITATION })
+                .where(eq(users.id, userId));
+        }
+
+        revalidatePath(`/admin/users/${userId}`);
+        revalidatePath("/admin/dashboard");
+        revalidatePath("/application-status");
+
+        return { success: true, message: "Davet mektubu yüklendi ve öğrenci bir sonraki aşamaya geçirildi." };
+
+    } catch (error) {
+        console.error("Upload error:", error);
+        return { success: false, message: "Dosya yüklenirken bir hata oluştu." };
+    }
+}

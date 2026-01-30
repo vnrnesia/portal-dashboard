@@ -1,110 +1,93 @@
-"use client";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plane, Calendar, MapPin, Home, Clock } from "lucide-react";
-import confetti from "canvas-confetti";
-import { useEffect } from "react";
+import { Plane, Calendar, MapPin, Home, Clock, Info } from "lucide-react";
+import FlightClient from "./FlightClient";
+import { auth } from "@/auth";
+import { getDocuments } from "@/actions/documents";
+import { requireStep } from "@/lib/step-protection";
 
-export default function FlightPage() {
+export default async function FlightPage() {
+    // Require Step 7 (Acceptance) or 8 (Flight)
+    // Actually, Flight is step 8.
+    await requireStep(8);
 
-    useEffect(() => {
-        const duration = 3 * 1000;
-        const animationEnd = Date.now() + duration;
-        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+    const session = await auth();
+    const docs = await getDocuments();
 
-        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-        const interval: any = setInterval(function () {
-            const timeLeft = animationEnd - Date.now();
-
-            if (timeLeft <= 0) {
-                return clearInterval(interval);
-            }
-
-            const particleCount = 50 * (timeLeft / duration);
-            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
-        }, 250);
-
-        return () => clearInterval(interval);
-    }, []);
+    const flightTicket = docs.find(d => d.type === "flight_ticket" && d.status === "approved");
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <div className="text-center space-y-2">
-                <h1 className="text-3xl font-bold text-gray-900">Yolculuk Başlıyor! ✈️</h1>
-                <p className="text-gray-500">Tüm süreçler başarıyla tamamlandı. İşte uçuş ve konaklama detayların.</p>
+                <h1 className="text-3xl font-bold text-gray-900">Uçuş ve Karşılama ✈️</h1>
+                <p className="text-gray-500">
+                    {flightTicket
+                        ? "Uçuş detaylarınız hazır! İyi yolculuklar dileriz."
+                        : "Uçuş ve karşılama detaylarınız danışmanlarımız tarafından ayarlanıyor."}
+                </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-                {/* Flight Ticket */}
-                <Card className="p-0 overflow-hidden border-0 shadow-lg ring-1 ring-gray-200">
-                    <div className="bg-primary p-6 text-white flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <Plane className="h-6 w-6" />
-                            <span className="font-bold text-lg">TK 1234</span>
+            {flightTicket ? (
+                // Show Flight Details if ticket exists
+                <div className="grid md:grid-cols-2 gap-6">
+                    {/* Flight Ticket */}
+                    <Card className="p-0 overflow-hidden border-0 shadow-lg ring-1 ring-gray-200">
+                        <div className="bg-primary p-6 text-white flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <Plane className="h-6 w-6" />
+                                <span className="font-bold text-lg">Uçuş Detayı</span>
+                            </div>
+                            <span className="font-mono bg-white/20 px-3 py-1 rounded">BİLET</span>
                         </div>
-                        <span className="font-mono bg-white/20 px-3 py-1 rounded">BOARDING PASS</span>
+                        <div className="p-6 space-y-6 bg-white">
+                            <div className="flex justify-between items-center">
+                                <div className="space-y-1">
+                                    <p className="text-sm font-medium text-gray-900">Dosya Adı</p>
+                                    <p className="text-xs text-gray-500">{flightTicket.fileName}</p>
+                                </div>
+                                <Button variant="outline" size="sm" asChild>
+                                    <a href={flightTicket.fileUrl} target="_blank" rel="noopener noreferrer">Bileti İndir</a>
+                                </Button>
+                            </div>
+
+                            <div className="p-4 bg-yellow-50 rounded border border-yellow-100 text-sm text-yellow-800">
+                                <Info className="h-4 w-4 inline-block mr-1 mb-0.5" />
+                                Lütfen uçuş saatinizden en az 3 saat önce havalimanında olunuz.
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* Accommodation Hint */}
+                    <Card className="p-6 space-y-4 flex flex-col justify-center bg-gray-50 border-dashed">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-3 bg-purple-100 rounded-lg">
+                                <Home className="h-6 w-6 text-purple-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-900">Karşılama & Konaklama</h3>
+                                <p className="text-sm text-gray-500">Detaylar ayrıca iletilecektir.</p>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            ) : (
+                // Show "Pending" state
+                <Card className="p-12 text-center space-y-6 border-blue-100 bg-blue-50/50">
+                    <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
+                        <Clock className="h-8 w-8 text-blue-600" />
                     </div>
-                    <div className="p-6 space-y-6 bg-white">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <p className="text-xs text-gray-500 uppercase">Kalkış</p>
-                                <p className="text-2xl font-bold">IST</p>
-                                <p className="text-sm text-gray-600">İstanbul</p>
-                            </div>
-                            <div className="flex-1 border-b-2 border-dashed border-gray-300 mx-4 relative top-1"></div>
-                            <div className="text-right">
-                                <p className="text-xs text-gray-500 uppercase">Varış</p>
-                                <p className="text-2xl font-bold">MUC</p>
-                                <p className="text-sm text-gray-600">Münih</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                            <div>
-                                <p className="text-xs text-gray-500 uppercase flex items-center gap-1"><Calendar className="h-3 w-3" /> Tarih</p>
-                                <p className="font-semibold">15 Eylül 2026</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500 uppercase flex items-center gap-1"><Clock className="h-3 w-3" /> Saat</p>
-                                <p className="font-semibold">14:30</p>
-                            </div>
-                        </div>
+                    <div>
+                        <h3 className="text-xl font-semibold text-blue-900">Planlama Yapılıyor</h3>
+                        <p className="text-blue-700 max-w-md mx-auto mt-2">
+                            Danışmanlarımız şu anda uçuş ve karşılama detaylarınızı organize ediyor.
+                            Biletiniz hazır olduğunda buradan görüntüleyebileceksiniz ve size bildirim gönderilecektir.
+                        </p>
                     </div>
                 </Card>
+            )}
 
-                {/* Accommodation */}
-                <Card className="p-6 space-y-6 flex flex-col justify-center">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-3 bg-purple-100 rounded-lg">
-                            <Home className="h-6 w-6 text-purple-600" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg">Konaklama Bilgisi</h3>
-                            <p className="text-sm text-gray-500">Student Dormitory A</p>
-                        </div>
-                    </div>
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                            <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                            <p className="text-sm text-gray-600">
-                                Arcisstraße 21, 80333 München, Germany
-                                <br />
-                                <span className="text-xs text-gray-400">Kampüse 5 dk yürüme mesafesinde</span>
-                            </p>
-                        </div>
-                        <Button variant="outline" className="w-full">Yol Tarifi Al</Button>
-                    </div>
-                </Card>
-            </div>
-
-            <div className="text-center pt-8">
-                <p className="text-green-600 font-medium mb-4">Harika bir eğitim yılı dileriz!</p>
-                <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800">
-                    Panoya Dön
-                </Button>
-            </div>
+            <FlightClient />
         </div>
     );
 }

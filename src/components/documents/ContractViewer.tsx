@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { FileText, Download, Check, Loader2, User, Phone, MapPin, ArrowRight, Clock } from "lucide-react";
+import { FileText, Download, Check, Loader2, User, Phone, MapPin, ArrowRight, Clock, Edit2, CheckCircle } from "lucide-react";
 import { useAppStore } from "@/lib/stores/useAppStore";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -14,7 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadContract, updateDocumentStatus } from "@/actions/documents";
+import { updateProfile } from "@/actions/profile";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface ContractViewerProps {
     userName: string;
@@ -24,25 +26,50 @@ interface ContractViewerProps {
         fileName: string | null;
         fileUrl: string | null;
     } | null;
+    adminContractDoc?: {
+        id: string;
+        fileName: string | null;
+        fileUrl: string | null;
+    } | undefined;
+    profileData?: {
+        name: string | null;
+        tcKimlik: string | null;
+        phone: string | null;
+        address: string | null;
+        city: string | null;
+        country: string | null;
+    };
 }
 
-export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
+export function ContractViewer({ userName, contractDoc, adminContractDoc, profileData }: ContractViewerProps) {
     const [isExporting, setIsExporting] = useState(false);
     const { selectedProgram } = useAppStore();
     const contractRef = useRef<HTMLDivElement>(null);
 
-    // Contract Details State
+    // Check if profile has required data
+    const hasProfileData = !!(profileData?.name && profileData?.tcKimlik && profileData?.phone && profileData?.address);
+
+    // States for the flow
+    const [showConfirmation, setShowConfirmation] = useState(hasProfileData);
+    const [isEditing, setIsEditing] = useState(false);
+
+    // Contract Details State - pre-fill from profile if available
     const [contractDetails, setContractDetails] = useState({
-        tcNo: "",
-        phone: "",
-        address: ""
+        name: profileData?.name || userName || "",
+        tcNo: profileData?.tcKimlik || "",
+        phone: profileData?.phone || "",
+        address: profileData?.address ?
+            `${profileData.address}${profileData.city ? `, ${profileData.city}` : ''}${profileData.country ? `, ${profileData.country}` : ''}`
+            : ""
     });
     const [isDetailsSubmitted, setIsDetailsSubmitted] = useState(!!contractDoc); // If doc exists, skip details
+    const [isConfirmed, setIsConfirmed] = useState(false);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
 
     const currentDate = new Date().toLocaleDateString('tr-TR');
 
     // Dynamic Data
-    const studentName = userName || "Öğrenci Adı";
+    const studentName = contractDetails.name || userName || "Öğrenci Adı";
     const universityName = selectedProgram?.university || "UNIVERISTY_PLACEHOLDER";
     const programName = selectedProgram?.name || "PROGRAM_PLACEHOLDER";
 
@@ -54,9 +81,20 @@ export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
     const isApproved = contractDoc?.status === 'approved';
     const [localUploadedFileName, setLocalUploadedFileName] = useState<string | null>(contractDoc?.fileName || null);
 
-    const handleDetailsSubmit = (e: React.FormEvent) => {
+    const handleConfirmDetails = () => {
+        setIsConfirmed(true);
+        setIsDetailsSubmitted(true);
+        toast.success("Bilgiler onaylandı, sözleşme oluşturuluyor...");
+    };
+
+    const handleEditDetails = () => {
+        setShowConfirmation(false);
+        setIsEditing(true);
+    };
+
+    const handleDetailsSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!contractDetails.tcNo || !contractDetails.phone || !contractDetails.address) {
+        if (!contractDetails.name || !contractDetails.tcNo || !contractDetails.phone || !contractDetails.address) {
             toast.error("Lütfen tüm alanları doldurunuz.");
             return;
         }
@@ -64,6 +102,25 @@ export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
             toast.error("T.C. Kimlik Numarası 11 haneli olmalıdır.");
             return;
         }
+
+        // If user entered/edited data, save to profile
+        if (!hasProfileData || isEditing) {
+            setIsSavingProfile(true);
+            try {
+                await updateProfile({
+                    name: contractDetails.name,
+                    tcKimlik: contractDetails.tcNo,
+                    phone: contractDetails.phone,
+                    address: contractDetails.address
+                });
+                toast.success("Bilgiler profilinize kaydedildi.");
+            } catch (error) {
+                toast.error("Profil güncellenirken bir hata oluştu.");
+            } finally {
+                setIsSavingProfile(false);
+            }
+        }
+
         setIsDetailsSubmitted(true);
         toast.success("Bilgiler kaydedildi, sözleşme oluşturuluyor...");
     };
@@ -187,16 +244,135 @@ export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
         }
     };
 
+    // Show confirmation if profile has data and not yet confirmed
+    if (hasProfileData && showConfirmation && !isDetailsSubmitted && !isUploaded && !isReviewing) {
+        return (
+            <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="text-center space-y-2">
+                    <h1 className="text-2xl font-bold">Sözleşme Bilgileri</h1>
+                    <p className="text-gray-500">Profilinizden alınan bilgileri kontrol ediniz.</p>
+                </div>
+
+                <Card className="p-6 border shadow-lg bg-white">
+                    <div className="space-y-6">
+                        {/* Info Banner */}
+                        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                            <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="font-medium text-blue-900">Profil bilgileriniz bulundu</p>
+                                <p className="text-sm text-blue-700 mt-1">
+                                    Aşağıdaki bilgiler profilinizden alınmıştır. Doğruysa onaylayarak devam edebilirsiniz.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Preview Data */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                                <User className="h-5 w-5 text-gray-500" />
+                                <div>
+                                    <p className="text-sm text-gray-500">Ad Soyad</p>
+                                    <p className="font-medium">{contractDetails.name}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                                <User className="h-5 w-5 text-gray-500" />
+                                <div>
+                                    <p className="text-sm text-gray-500">T.C. Kimlik Numarası</p>
+                                    <p className="font-medium">{contractDetails.tcNo}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                                <Phone className="h-5 w-5 text-gray-500" />
+                                <div>
+                                    <p className="text-sm text-gray-500">Telefon Numarası</p>
+                                    <p className="font-medium">{contractDetails.phone}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                                <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
+                                <div>
+                                    <p className="text-sm text-gray-500">İkamet Adresi</p>
+                                    <p className="font-medium">{contractDetails.address}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                            <Button
+                                onClick={handleEditDetails}
+                                variant="outline"
+                                className="flex-1"
+                            >
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                Bilgileri Düzenle
+                            </Button>
+                            <Button
+                                onClick={handleConfirmDetails}
+                                className="flex-1 bg-primary"
+                            >
+                                <Check className="mr-2 h-4 w-4" />
+                                Bilgiler Doğru, Devam Et
+                            </Button>
+                        </div>
+
+                        <p className="text-xs text-center text-gray-400">
+                            Bilgilerinizi daha sonra{" "}
+                            <Link href="/profile" className="text-primary hover:underline">
+                                Profil
+                            </Link>{" "}
+                            sayfasından güncelleyebilirsiniz.
+                        </p>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
+
+    // Show form if no profile data or user wants to edit
     if (!isDetailsSubmitted && !isUploaded && !isReviewing) {
         return (
             <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="text-center space-y-2">
                     <h1 className="text-2xl font-bold">Sözleşme Bilgileri</h1>
-                    <p className="text-gray-500">Sözleşmenizin hazırlanabilmesi için lütfen aşağıdaki bilgileri eksiksiz doldurunuz.</p>
+                    <p className="text-gray-500">
+                        {isEditing
+                            ? "Bilgilerinizi düzenleyiniz. Değişiklikler profilinize de kaydedilecektir."
+                            : "Sözleşmenizin hazırlanabilmesi için lütfen aşağıdaki bilgileri eksiksiz doldurunuz."
+                        }
+                    </p>
                 </div>
+
+                {!hasProfileData && !isEditing && (
+                    <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-100 rounded-lg">
+                        <User className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                            <p className="font-medium text-amber-900">Profil bilgileriniz eksik</p>
+                            <p className="text-sm text-amber-700 mt-1">
+                                Aşağıdaki bilgileri doldurun, profilinize de otomatik olarak kaydedilecektir.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <Card className="p-6 border shadow-lg bg-white">
                     <form onSubmit={handleDetailsSubmit} className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Ad Soyad</Label>
+                            <div className="relative">
+                                <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                                <Input
+                                    id="name"
+                                    placeholder="Adınız ve soyadınız"
+                                    className="pl-9"
+                                    value={contractDetails.name}
+                                    onChange={(e) => setContractDetails({ ...contractDetails, name: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="tcNo">T.C. Kimlik Numarası</Label>
                             <div className="relative">
@@ -243,9 +419,39 @@ export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
                             </div>
                         </div>
 
-                        <Button type="submit" className="w-full bg-primary" size="lg">
-                            Sözleşmeyi Oluştur
+                        <Button type="submit" className="w-full bg-primary" size="lg" disabled={isSavingProfile}>
+                            {isSavingProfile ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Kaydediliyor...
+                                </>
+                            ) : (
+                                "Sözleşmeyi Oluştur"
+                            )}
                         </Button>
+
+                        {isEditing && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="w-full"
+                                onClick={() => {
+                                    setShowConfirmation(true);
+                                    setIsEditing(false);
+                                    // Reset to original profile data
+                                    setContractDetails({
+                                        name: profileData?.name || userName || "",
+                                        tcNo: profileData?.tcKimlik || "",
+                                        phone: profileData?.phone || "",
+                                        address: profileData?.address ?
+                                            `${profileData.address}${profileData.city ? `, ${profileData.city}` : ''}${profileData.country ? `, ${profileData.country}` : ''}`
+                                            : ""
+                                    });
+                                }}
+                            >
+                                Vazgeç
+                            </Button>
+                        )}
                     </form>
                 </Card>
             </div>
@@ -450,8 +656,6 @@ export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
                                 </div>
                                 <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={async () => {
                                     try {
-                                        // If it is already uploaded to DB, maybe we want to allow removing? 
-                                        // For now just reset local state if needed or implement a remove action
                                         toast.info("Silme işlemi henüz aktif değil.");
                                     } catch (e) { }
                                 }}>
@@ -462,32 +666,74 @@ export function ContractViewer({ userName, contractDoc }: ContractViewerProps) {
                     </div>
                 </div>
 
-                {isApproved ? (
-                    <div className="mt-4 flex justify-end">
-                        <Button
-                            className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-                            onClick={() => router.push("/translation")}
-                        >
-                            <Check className="mr-2 h-4 w-4" />
-                            Onaylandı - Sonraki Adım
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
+                {/* Final Status - Admin Signed Contract */}
+                {isApproved && (
+                    <div className="mt-6 pt-6 border-t animate-in fade-in slide-in-from-bottom-2">
+                        {adminContractDoc ? (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center space-y-4">
+                                <div className="h-12 w-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                                    <Check className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-lg text-green-900">Sözleşmeyi İmzaladık!</h4>
+                                    <p className="text-green-800 max-w-sm mx-auto mt-1">
+                                        Sözleşmeniz tarafımızca da imzalanmıştır. Aşağıdan nihai belgeyi indirebilir ve bir sonraki adıma geçebilirsiniz.
+                                    </p>
+                                </div>
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                    <Button variant="outline" className="w-full sm:w-auto border-green-200 text-green-700 hover:bg-green-100" asChild>
+                                        <a href={adminContractDoc.fileUrl || "#"} download={adminContractDoc.fileName || "imzali_sozlesme_final.pdf"} target="_blank">
+                                            <Download className="mr-2 h-4 w-4" />
+                                            Nihai Sözleşmeyi İndir
+                                        </a>
+                                    </Button>
+                                    <Button
+                                        className="w-full sm:w-auto bg-green-600 hover:bg-green-700 shadow-sm"
+                                        onClick={() => router.push("/translation")}
+                                    >
+                                        Sonraki Adıma Geç
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            // Fallback if approved but no admin contract yet? 
+                            // User says "Sözleşmeyi imzaladık...". 
+                            // If admin approved but hasnt uploaded the file, we can show generic message or prompt to wait?
+                            // But usually admin approves AND uploads.
+                            // I'll show generic if missing doc.
+                            <div className="flex justify-end mt-4">
+                                <Button
+                                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+                                    onClick={() => router.push("/translation")}
+                                >
+                                    <Check className="mr-2 h-4 w-4" />
+                                    Sözleşme Onaylandı - Sonraki Adım
+                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
-                ) : isReviewing ? (
-                    <div className="mt-4 flex justify-end">
-                        <Button className="w-full sm:w-auto" disabled>
-                            <Clock className="mr-2 h-4 w-4" />
-                            İncelemede
-                        </Button>
-                    </div>
-                ) : isUploaded ? (
-                    <div className="mt-4 flex justify-end">
-                        <Button className="w-full sm:w-auto bg-primary" onClick={handleSubmitForApproval}>
-                            <Check className="mr-2 h-4 w-4" />
-                            Onaya Gönder
-                        </Button>
-                    </div>
-                ) : null}
+                )}
+
+                {/* Status Bar for Non-Approved states */}
+                {!isApproved && (
+                    isReviewing ? (
+                        <div className="mt-4 flex justify-end">
+                            <Button className="w-full sm:w-auto" disabled>
+                                <Clock className="mr-2 h-4 w-4" />
+                                İncelemede
+                            </Button>
+                        </div>
+                    ) : isUploaded ? (
+                        <div className="mt-4 flex justify-end">
+                            <Button className="w-full sm:w-auto bg-primary" onClick={handleSubmitForApproval}>
+                                <Check className="mr-2 h-4 w-4" />
+                                Onaya Gönder
+                            </Button>
+                        </div>
+                    ) : null
+                )}
             </Card>
         </div>
     );

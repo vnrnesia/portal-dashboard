@@ -24,7 +24,10 @@ export async function advanceUserStep(targetStep: number) {
     }
 
     await db.update(users)
-        .set({ onboardingStep: targetStep })
+        .set({
+            onboardingStep: targetStep,
+            stepApprovalStatus: "pending"
+        })
         .where(eq(users.id, session.user.id));
 
     revalidatePath("/dashboard");

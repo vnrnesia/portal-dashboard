@@ -3,7 +3,8 @@
 import { useSession } from "next-auth/react";
 import { DetailedTimeline } from "@/components/dashboard/DetailedTimeline";
 import { QuickActions } from "@/components/dashboard/QuickActions";
-import { Bell, ArrowRight, Star, Clock } from "lucide-react";
+import { Bell, ArrowRight, Star, Clock, CheckCircle2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -16,6 +17,7 @@ export default function DashboardPage() {
     const currentStep = user?.onboardingStep || 1;
     const [mounted, setMounted] = useState(false);
     const [isInReview, setIsInReview] = useState(false);
+    const [isApproved, setIsApproved] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -23,33 +25,38 @@ export default function DashboardPage() {
 
     // Fetch document review status for steps that have documents (2, 3, 4)
     useEffect(() => {
-        if (currentStep >= 2 && currentStep <= 4) {
+        if (currentStep >= 2) {
             getDocumentReviewStatus(currentStep).then(result => {
                 setIsInReview(result.hasDocumentsInReview);
+                setIsApproved(result.stepApprovalStatus === "approved");
             });
         }
     }, [currentStep]);
 
-    // Step labels mapping
+    // Step labels mapping aligned with APPLICATION_STEPS
     const stepLabels: Record<number, string> = {
-        1: "Program Seçimi",
-        2: "Evrak Toplama",
-        3: "Sözleşme Onayı",
-        4: "Yeminli Tercüme",
-        5: "Üniversite Başvurusu",
-        6: "Uçuş ve Konaklama",
+        1: "Kayıt İşlemleri",
+        2: "Program Seçimi",
+        3: "Evrak Yükleme",
+        4: "Sözleşme Onayı",
+        5: "Belgelerin Tercümelenmesi",
+        6: "Üniversite Başvurusu",
+        7: "Kabul ve Vize Süreci",
+        8: "Uçuş ve Karşılama"
     };
 
     const nextStepLabels: Record<number, string> = {
-        1: "/programs",
-        2: "/documents",
-        3: "/contract",
-        4: "/translation", // or timeline
-        5: "/application-status",
-        6: "/flight",
+        1: "/programs", // Go to Programs to start Step 2
+        2: "/programs", // Determine programs
+        3: "/documents",
+        4: "/contract",
+        5: "/translation",
+        6: "/application-status",
+        7: "/acceptance",
+        8: "/flight",
     };
 
-    const currentLabel = stepLabels[currentStep] || "Bilinmiyor";
+    const currentLabel = stepLabels[currentStep] || "Tamamlandı";
     const nextPath = nextStepLabels[currentStep] || "/dashboard";
 
     const mockNotifications = [
@@ -77,7 +84,9 @@ export default function DashboardPage() {
 
                     {/* CTA Card for Next Step */}
                     <div className={`p-8 rounded-2xl text-white shadow-xl relative overflow-hidden ${currentStep === 5
-                            ? "bg-gradient-to-br from-blue-500 to-blue-700"
+                        ? "bg-gradient-to-br from-blue-500 to-blue-700"
+                        : isApproved
+                            ? "bg-gradient-to-br from-green-500 to-green-700"
                             : isInReview
                                 ? "bg-gradient-to-br from-yellow-500 to-yellow-700"
                                 : "bg-gradient-to-br from-primary to-orange-700"
@@ -90,6 +99,11 @@ export default function DashboardPage() {
                                     <>
                                         <Clock className="w-4 h-4 text-white" />
                                         <span className="font-medium">Beklemede</span>
+                                    </>
+                                ) : isApproved ? (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4 text-white" />
+                                        <span className="font-medium">Tamamlandı</span>
                                     </>
                                 ) : isInReview ? (
                                     <>
@@ -105,25 +119,54 @@ export default function DashboardPage() {
                             </div>
                             <div>
                                 <h2 className="text-3xl font-bold mb-2">{currentLabel}</h2>
-                                <p className={`text-lg max-w-lg ${currentStep === 5 ? "text-blue-100" : "text-orange-100"}`}>
-                                    {currentStep === 5
-                                        ? "Evraklarınızı üniversiteye ilettik. Üniversiteden dönüş bekleniyor. Bu işlem 15 güne kadar sürebilir."
-                                        : isInReview
-                                            ? "Evraklarınız danışmanlarımız tarafından inceleniyor. Size en kısa sürede dönüş yapılacaktır."
-                                            : "Başvuru sürecini tamamlamak için bu adımı bitirmelisin."
-                                    }
+                                <p className={`text-lg max-w-lg ${currentStep === 5 ? "text-blue-100" : isApproved ? "text-green-100" : "text-orange-100"}`}>
+                                    {(() => {
+                                        if (isApproved) return "Bu aşamayı başarıyla tamamladınız. Bir sonraki adıma geçebilirsiniz.";
+
+                                        switch (currentStep) {
+                                            case 1: return "Profilinizi tamamladınız. Şimdi size uygun programları seçelim.";
+                                            case 2: return "Hedeflediğiniz üniversite ve bölümleri buradan seçebilirsiniz.";
+                                            case 3: return isInReview ? "Belgeleriniz inceleniyor. Onaylandığında bir sonraki aşamaya geçebileceksiniz." : "Başvuru için gerekli belgeleri eksiksiz yüklemelisiniz.";
+                                            case 4: return isInReview ? "Sözleşmeniz kontrol ediliyor." : "Sürecin başlaması için hizmet sözleşmesini onaylamanız gerekmektedir.";
+                                            case 5: return isInReview ? "Belgeleriniz tercüme ve kontrol aşamasında." : "Tercüme ettiğiniz belgeleri yüklemek için bu adımdan devam edin.";
+                                            case 6: return "Üniversite başvurularınız yapılıyor. Sonuçlar bekleniyor.";
+                                            case 7: return "Kabul mektubunuz geldiğinde vize sürecine geçeceğiz.";
+                                            case 8: return isApproved ? "Uçuş bilgileriniz ve biletiniz hazır. İyi yolculuklar!" : "Uçuş ve karşılama detaylarınız şu anda planlanıyor.";
+                                            default: return "Başvuru sürecini tamamlamak için bu adımı bitirmelisin.";
+                                        }
+                                    })()}
                                 </p>
                             </div>
                             <div className="pt-2">
-                                <Button asChild size="lg" className={`font-bold border-0 cursor-pointer ${currentStep === 5
+                                {isApproved ? (
+                                    <Button
+                                        size="lg"
+                                        className="bg-white text-green-600 hover:bg-gray-100 font-bold border-0 cursor-pointer"
+                                        onClick={async () => {
+                                            const { advanceUserStep } = await import("@/actions/advance-step");
+                                            await advanceUserStep(currentStep + 1);
+                                            window.location.reload(); // Force refresh to update session/UI
+                                        }}
+                                    >
+                                        Sonraki Adıma Geç
+                                        <ArrowRight className="ml-2 h-5 w-5" />
+                                    </Button>
+                                ) : (
+                                    <Button asChild size="lg" className={`font-bold border-0 cursor-pointer ${currentStep === 5
                                         ? "bg-white text-blue-600 hover:bg-gray-100"
                                         : "bg-white text-primary hover:bg-gray-100"
-                                    }`}>
-                                    <Link href={nextPath}>
-                                        {currentStep === 5 ? "Durumu Görüntüle" : isInReview ? "Evraklara Git" : "Devam Et"}
-                                        <ArrowRight className="ml-2 h-5 w-5" />
-                                    </Link>
-                                </Button>
+                                        }`}>
+                                        <Link href={nextPath}>
+                                            {currentStep === 5 ? "Belgeleri Yükle"
+                                                : isInReview ? "Durumu Gör"
+                                                    : currentStep === 3 ? "Belge Yükle"
+                                                        : currentStep === 4 ? "Sözleşmeyi İmzala"
+                                                            : currentStep === 8 ? "Detayları Gör"
+                                                                : "Devam Et"}
+                                            <ArrowRight className="ml-2 h-5 w-5" />
+                                        </Link>
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>

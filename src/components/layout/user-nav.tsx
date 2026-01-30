@@ -20,8 +20,9 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from "@/components/ui/sidebar";
-import { ChevronsUpDown, LogOut, Sparkles, CreditCard, Bell } from "lucide-react";
+import { ChevronsUpDown, LogOut, User, Bell } from "lucide-react";
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 
 interface UserNavProps {
     user: {
@@ -78,16 +79,11 @@ export function UserNav({ user }: UserNavProps) {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuItem>
-                                <Sparkles className="mr-2 h-4 w-4" />
-                                Plan Yükselt
-                            </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                            <DropdownMenuItem>
-                                <CreditCard className="mr-2 h-4 w-4" />
-                                Ödemeler
+                            <DropdownMenuItem asChild>
+                                <Link href="/profile">
+                                    <User className="mr-2 h-4 w-4" />
+                                    Profil
+                                </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                                 <Bell className="mr-2 h-4 w-4" />
@@ -105,4 +101,3 @@ export function UserNav({ user }: UserNavProps) {
         </SidebarMenu>
     );
 }
-

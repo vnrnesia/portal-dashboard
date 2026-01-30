@@ -27,9 +27,9 @@ export async function getDocumentReviewStatus(step?: number) {
 
     // Define which document types belong to which step
     const stepDocTypes: Record<number, string[]> = {
-        2: ["passport", "diploma", "transcript", "biometric_photo"], // Documents
-        3: ["signed_contract"], // Contract
-        4: ["passport_translation", "diploma_translation", "transcript_translation"], // Translation
+        3: ["passport", "diploma", "transcript", "biometric_photo"], // Documents (Step 3)
+        4: ["signed_contract"], // Contract (Step 4)
+        5: ["passport_translation", "diploma_translation", "transcript_translation"], // Translation (Step 5)
     };
 
     // If step is provided, filter by that step's document types
@@ -38,10 +38,25 @@ export async function getDocumentReviewStatus(step?: number) {
         relevantDocs = docs.filter(doc => stepDocTypes[step].includes(doc.type));
     }
 
+    // Treat 'uploaded' as in-review for UI feedback if not all are approved yet
     const hasDocumentsInReview = relevantDocs.some(doc => doc.status === "reviewing");
+    const hasUploadedDocs = relevantDocs.some(doc => doc.status === "uploaded");
     const allApproved = relevantDocs.length > 0 && relevantDocs.every(doc => doc.status === "approved");
 
-    return { hasDocumentsInReview, allApproved };
+    const user = await db.query.users.findFirst({
+        where: eq(users.id, session.user.id),
+        columns: { stepApprovalStatus: true }
+    });
+
+    // Fallback: If all docs are approved but step status isn't updated yet, treat as approved
+    const finalStepStatus = allApproved ? "approved" : (user?.stepApprovalStatus || "pending");
+
+    return {
+        hasDocumentsInReview,
+        hasUploadedDocs,
+        allApproved,
+        stepApprovalStatus: finalStepStatus
+    };
 }
 
 export async function updateDocumentStatus(docId: string, status: "pending" | "uploaded" | "reviewing" | "approved" | "rejected") {
@@ -102,6 +117,8 @@ export async function uploadDocument(type: string, fileName: string, fileUrl: st
         )
     });
 
+    let docId: string;
+
     if (existing) {
         await db.update(documents)
             .set({
@@ -111,18 +128,21 @@ export async function uploadDocument(type: string, fileName: string, fileUrl: st
                 updatedAt: new Date()
             })
             .where(eq(documents.id, existing.id));
+        docId = existing.id;
     } else {
-        await db.insert(documents).values({
+        const [newDoc] = await db.insert(documents).values({
             userId: session.user.id,
             type,
             label,
             status: "uploaded",
             fileName,
             fileUrl
-        });
+        }).returning({ id: documents.id });
+        docId = newDoc.id;
     }
 
     revalidatePath("/documents");
+    return { id: docId };
 }
 
 export async function deleteDocument(docId: string) {
@@ -159,9 +179,9 @@ export async function submitDocumentsForReview(step?: number) {
 
     // Define which document types belong to which step
     const stepDocTypes: Record<number, string[]> = {
-        2: ["passport", "diploma", "transcript", "biometric_photo"], // Documents
-        3: ["signed_contract"], // Contract
-        4: ["passport_translation", "diploma_translation", "transcript_translation"], // Translation
+        3: ["passport", "diploma", "transcript", "biometric_photo"], // Documents (Step 3)
+        4: ["signed_contract"], // Contract (Step 4)
+        5: ["passport_translation", "diploma_translation", "transcript_translation"], // Translation (Step 5)
     };
 
     // Get all user documents
@@ -175,16 +195,16 @@ export async function submitDocumentsForReview(step?: number) {
         relevantDocs = userDocs.filter(doc => stepDocTypes[step].includes(doc.type));
     }
 
-    // Check if any relevant documents are already in reviewing or approved status
-    const hasReviewingOrApproved = relevantDocs.some(
+    // Check if all relevant documents are already approved or reviewing (no need to submit again)
+    const allReviewingOrApproved = relevantDocs.length > 0 && relevantDocs.every(
         doc => doc.status === "reviewing" || doc.status === "approved"
     );
 
-    if (hasReviewingOrApproved) {
-        return { success: false, message: "Belgeleriniz zaten inceleme aşamasında." };
+    if (allReviewingOrApproved) {
+        return { success: false, message: "Belgeleriniz zaten inceleme aşamasında veya onaylandı." };
     }
 
-    // Check if all required documents are uploaded
+    // Check if any documents are uploaded (including re-uploaded after rejection)
     const uploadedDocs = relevantDocs.filter(doc => doc.status === "uploaded");
     if (uploadedDocs.length === 0) {
         return { success: false, message: "Lütfen en az bir belge yükleyiniz." };

@@ -34,6 +34,8 @@ import {
     SidebarGroupContent,
     SidebarRail,
 } from "@/components/ui/sidebar";
+
+import { Separator } from "@/components/ui/separator";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { UserNav } from "@/components/layout/user-nav";
@@ -72,24 +74,14 @@ const data = {
             icon: Frame,
         },
         {
-            title: "Süreç Takibi",
-            url: "/timeline",
-            icon: Clock,
-        },
-        {
             title: "Kabul & Vize",
-            url: "/invitation",
+            url: "/acceptance",
             icon: Map,
         },
         {
             title: "Uçuş",
             url: "/flight",
             icon: PieChart,
-        },
-        {
-            title: "Mesajlar",
-            url: "/messages",
-            icon: MessageSquare,
         },
     ],
     navSecondary: [
@@ -152,18 +144,24 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
 
                                 // Let's define specific step requirements
                                 let requiredStep = 1;
-                                if (item.url === "/programs") requiredStep = 1;
-                                else if (item.url === "/documents") requiredStep = 2;
-                                else if (item.url === "/contract") requiredStep = 3;
-                                else if (item.url === "/translation") requiredStep = 4;
-                                else if (item.url === "/application-status") requiredStep = 5;
-                                else if (item.url === "/timeline") requiredStep = 6;
+                                if (item.url === "/programs") requiredStep = 1; // Unlock for new users (Step 1)
+                                else if (item.url === "/documents") requiredStep = 3; // Step 3: Evrak
+                                else if (item.url === "/contract") requiredStep = 4; // Step 4: Sozlesme
+                                else if (item.url === "/translation") requiredStep = 5; // Step 5: Tercume
+                                else if (item.url === "/application-status") requiredStep = 6; // Step 6: Basvuru
+                                else if (item.url === "/acceptance") requiredStep = 7; // Step 7: Kabul & Vize
+                                else if (item.url === "/flight") requiredStep = 8; // Step 8: Ucus
+                                else if (item.url === "/timeline") requiredStep = 0; // Always accessible
                                 else if (item.url === "/dashboard") requiredStep = 0; // Always accessible
-                                else requiredStep = 99; // Others locked for now
+                                else requiredStep = 99; // Others locked
 
                                 // @ts-ignore
-                                const userStep = user?.onboardingStep || 1;
-                                const isLocked = userStep < requiredStep;
+                                const userStep = (user?.onboardingStep || 1);
+                                const approvalStatus = user?.stepApprovalStatus;
+
+                                // Unlock if step is reached OR if it's the immediate next step and current is approved
+                                const isNextUnlockable = (userStep === requiredStep - 1) && approvalStatus === "approved";
+                                const isLocked = (userStep < requiredStep) && !isNextUnlockable;
 
                                 return (
                                     <SidebarMenuItem key={item.title}>
@@ -220,6 +218,34 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
 
                 <SidebarGroup className="mt-auto">
                     <SidebarGroupContent>
+                        <div className="px-2 pb-2">
+                            <Separator className="my-2" />
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild size="lg" className="h-auto py-3">
+                                        <Link href="/timeline">
+                                            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                                                <Clock className="size-4" />
+                                            </div>
+                                            <div className="grid flex-1 text-left text-sm leading-tight">
+                                                <span className="truncate font-semibold">Süreç Takibi</span>
+                                                <span className="truncate text-xs text-muted-foreground">
+                                                    {(() => {
+                                                        const steps = ["Kayıt", "Program", "Evrak", "Sözleşme", "Tercüme", "Başvuru", "Kabul & Vize", "Uçuş"];
+                                                        // @ts-ignore
+                                                        const stepIndex = (user?.onboardingStep || 1) - 1;
+                                                        // Handle case where step might be out of bounds or step names need alignment
+                                                        return `Adım ${user?.onboardingStep || 1}: ${steps[stepIndex] || "İşlemde"}`;
+                                                    })()}
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                            <Separator className="my-2" />
+                        </div>
+
                         <SidebarMenu>
                             {data.navSecondary.map((item) => (
                                 <SidebarMenuItem key={item.title}>

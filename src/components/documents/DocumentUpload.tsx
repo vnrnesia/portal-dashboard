@@ -31,18 +31,62 @@ interface Document {
 }
 
 function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPreview: (doc: Document) => void, onStatusChange: (id: string, status: "uploaded" | "pending", fileName?: string, fileUrl?: string, type?: string, label?: string) => Promise<void> | void }) {
+    const [uploadProgress, setUploadProgress] = useState<number>(0);
+    const [isUploading, setIsUploading] = useState(false);
 
-    const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
+        // Handle rejected files (size exceeded)
+        if (rejectedFiles.length > 0) {
+            const rejection = rejectedFiles[0];
+            if (rejection.errors?.some((e: any) => e.code === "file-too-large")) {
+                toast.error("Dosya boyutu 5MB'dan büyük olamaz!");
+            } else {
+                toast.error("Geçersiz dosya formatı. Lütfen PDF, JPEG veya PNG yükleyin.");
+            }
+            return;
+        }
+
         if (acceptedFiles.length > 0) {
             const file = acceptedFiles[0];
 
+            // Double check file size
+            if (file.size > MAX_FILE_SIZE) {
+                toast.error(`Dosya boyutu çok büyük (${(file.size / 1024 / 1024).toFixed(2)}MB). Maksimum 5MB olmalıdır.`);
+                return;
+            }
+
+            setIsUploading(true);
+            setUploadProgress(0);
+
             try {
-                // In a real app, upload to S3 here.
+                // Simulate upload progress
+                const progressInterval = setInterval(() => {
+                    setUploadProgress(prev => {
+                        if (prev >= 90) {
+                            clearInterval(progressInterval);
+                            return 90;
+                        }
+                        return prev + 10;
+                    });
+                }, 100);
+
                 const url = URL.createObjectURL(file);
-                // Call parent handler which calls server action
                 await onStatusChange(doc.id, 'uploaded', file.name, url, doc.type, doc.label);
+
+                clearInterval(progressInterval);
+                setUploadProgress(100);
+
                 toast.success(`${doc.label} başarıyla yüklendi: ${file.name}`);
+
+                setTimeout(() => {
+                    setIsUploading(false);
+                    setUploadProgress(0);
+                }, 500);
             } catch (error) {
+                setIsUploading(false);
+                setUploadProgress(0);
                 toast.error("Yükleme sırasında bir hata oluştu.");
             }
         }
@@ -50,19 +94,24 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
 
     const onDelete = async () => {
         try {
-            await deleteDocument(doc.id);
+            const isRealDbId = doc.id.includes("-");
+
+            if (isRealDbId) {
+                await deleteDocument(doc.id);
+            }
             onStatusChange(doc.id, 'pending');
             toast.info(`${doc.label} silindi.`);
         } catch (error) {
+            console.error("Delete error:", error);
             toast.error("Silme işlemi başarısız oldu.");
         }
     };
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
-        accept: { 'application/pdf': ['.pdf'], 'image/*': ['.jpeg', '.png'] },
-        maxSize: 5 * 1024 * 1024, // 5MB
-        disabled: doc.status === 'approved' || doc.status === 'reviewing'
+        accept: { 'application/pdf': ['.pdf'], 'image/*': ['.jpeg', '.jpg', '.png'] },
+        maxSize: MAX_FILE_SIZE,
+        disabled: doc.status === 'approved' || doc.status === 'reviewing' || isUploading
     });
 
     const getStatusBadge = (status: string | null) => {
@@ -104,7 +153,22 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-                {doc.status === 'pending' || doc.status === 'rejected' || !doc.status ? (
+                {isUploading ? (
+                    <div className="flex-1 sm:flex-none min-w-[200px]">
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                    className="bg-primary h-full transition-all duration-200 ease-out"
+                                    style={{ width: `${uploadProgress}%` }}
+                                />
+                            </div>
+                            <span className="text-sm font-medium text-primary min-w-[40px]">
+                                {uploadProgress}%
+                            </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Yükleniyor...</p>
+                    </div>
+                ) : doc.status === 'pending' || doc.status === 'rejected' || !doc.status ? (
                     <div {...getRootProps()} className={cn(
                         "flex-1 sm:flex-none cursor-pointer border-2 border-dashed rounded-lg px-6 py-2 transition-colors",
                         isDragActive ? 'border-primary bg-orange-50' : 'border-gray-200 hover:border-blue-400',
@@ -174,36 +238,48 @@ export function DocumentUploadList({ initialDocuments }: { initialDocuments: any
     const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
 
     const handleStatusChange = async (id: string, status: "uploaded" | "pending", fileName?: string, fileUrl?: string, type?: string, label?: string) => {
-        setDocuments(prev => prev.map(doc => {
-            if (doc.id === id || doc.type === id) {
-                return { ...doc, status, fileName: fileName || null, fileUrl: fileUrl || null, validationError: false };
-            }
-            return doc;
-        }));
-
-        // Persist to database
+        // Persist to database first if uploading
+        let newDbId: string | null = null;
         if (status === "uploaded" && fileName && fileUrl && type && label) {
             try {
-                await uploadDocument(type, fileName, fileUrl, label);
+                const result = await uploadDocument(type, fileName, fileUrl, label);
+                newDbId = result.id;
             } catch (e) {
                 console.error("Failed to upload document:", e);
             }
         }
+
+        setDocuments(prev => prev.map(doc => {
+            if (doc.id === id || doc.type === id) {
+                return {
+                    ...doc,
+                    id: newDbId || doc.id, // Use new DB ID if available
+                    status,
+                    fileName: fileName || null,
+                    fileUrl: fileUrl || null,
+                    validationError: false
+                };
+            }
+            return doc;
+        }));
     };
 
     // Check if all documents are approved
     const allDocumentsApproved = documents.length > 0 && documents.every(doc => doc.status === "approved");
 
-    // Check if any documents are in review (but not all approved)
-    const hasDocumentsInReview = !allDocumentsApproved && documents.some(
-        doc => doc.status === "reviewing" || doc.status === "approved"
+    // Check if any documents are uploaded (ready to submit)
+    const hasUploadedDocs = documents.some(doc => doc.status === "uploaded");
+
+    // Check if documents are currently in review (but not uploaded, no need to re-submit)
+    const hasDocumentsInReview = !allDocumentsApproved && !hasUploadedDocs && documents.some(
+        doc => doc.status === "reviewing"
     );
 
     const handleSubmit = async () => {
         setIsSubmitting(true);
 
-        // Check if already in review
-        if (hasDocumentsInReview) {
+        // Check if already in review and no uploaded docs
+        if (hasDocumentsInReview && !hasUploadedDocs) {
             toast.info("Belgeleriniz zaten inceleme aşamasında.");
             setIsSubmitting(false);
             return;
@@ -309,24 +385,34 @@ export function DocumentUploadList({ initialDocuments }: { initialDocuments: any
                         <CheckCircle className="mr-2 h-4 w-4" />
                         Sonraki Adım
                     </Button>
+                ) : hasUploadedDocs ? (
+                    <Button
+                        size="lg"
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="bg-primary hover:bg-primary/90 w-full md:w-auto"
+                    >
+                        <Send className="mr-2 h-4 w-4" />
+                        {isSubmitting ? "Kontrol Ediliyor..." : "Onaya Gönder"}
+                    </Button>
+                ) : hasDocumentsInReview ? (
+                    <Button
+                        size="lg"
+                        disabled
+                        className="bg-primary hover:bg-primary/90 w-full md:w-auto"
+                    >
+                        <Clock className="mr-2 h-4 w-4" />
+                        İncelemede
+                    </Button>
                 ) : (
                     <Button
                         size="lg"
                         onClick={handleSubmit}
-                        disabled={isSubmitting || hasDocumentsInReview}
+                        disabled={isSubmitting}
                         className="bg-primary hover:bg-primary/90 w-full md:w-auto"
                     >
-                        {hasDocumentsInReview ? (
-                            <>
-                                <Clock className="mr-2 h-4 w-4" />
-                                İncelemede
-                            </>
-                        ) : (
-                            <>
-                                <Send className="mr-2 h-4 w-4" />
-                                {isSubmitting ? "Kontrol Ediliyor..." : "Onaya Gönder"}
-                            </>
-                        )}
+                        <Send className="mr-2 h-4 w-4" />
+                        {isSubmitting ? "Kontrol Ediliyor..." : "Onaya Gönder"}
                     </Button>
                 )}
             </div>

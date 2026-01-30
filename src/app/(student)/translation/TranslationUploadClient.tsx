@@ -274,7 +274,7 @@ export default function TranslationUploadClient({ initialDocuments, userName }: 
 
         // Submit - update all uploaded documents to reviewing in database
         try {
-            const result = await submitDocumentsForReview(4); // Step 4 = Translation
+            const result = await submitDocumentsForReview(5); // Step 5 = Translation
 
             if (result.success) {
                 toast.success(result.message);

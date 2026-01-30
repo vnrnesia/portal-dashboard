@@ -17,6 +17,26 @@ export const users = pgTable("user", {
     role: roleEnum("role").default("student"),
     onboardingStep: integer("onboardingStep").default(1),
     stepApprovalStatus: stepApprovalStatusEnum("step_approval_status").default("pending"),
+    visaTrackingCode: text("visa_tracking_code"),
+    selectedProgram: jsonb("selected_program"), // Stores full program object
+
+    // Profile fields
+    phone: text("phone"),
+    secondaryPhone: text("secondary_phone"),
+    birthDate: timestamp("birth_date", { mode: "date" }),
+    nationality: text("nationality"),
+    tcKimlik: text("tc_kimlik"),
+    passportNumber: text("passport_number"),
+    address: text("address"),
+    city: text("city"),
+    country: text("country"),
+    postalCode: text("postal_code"),
+
+    // Emergency contact
+    emergencyContactName: text("emergency_contact_name"),
+    emergencyContactPhone: text("emergency_contact_phone"),
+    emergencyContactRelation: text("emergency_contact_relation"),
+
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -117,3 +137,29 @@ export const documents = pgTable("document", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Relations
+import { relations } from "drizzle-orm";
+
+export const usersRelations = relations(users, ({ many }) => ({
+    documents: many(documents),
+    applications: many(applications),
+}));
+
+export const documentsRelations = relations(documents, ({ one }) => ({
+    user: one(users, {
+        fields: [documents.userId],
+        references: [users.id],
+    }),
+}));
+
+export const applicationsRelations = relations(applications, ({ one }) => ({
+    user: one(users, {
+        fields: [applications.userId],
+        references: [users.id],
+    }),
+    program: one(programs, {
+        fields: [applications.programId],
+        references: [programs.id],
+    }),
+}));

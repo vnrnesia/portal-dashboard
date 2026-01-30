@@ -13,32 +13,43 @@ import { toast } from "sonner";
 
 interface ProgramCardProps {
     program: Program;
+    currentSelection?: Program | null;
 }
 
-export function ProgramCard({ program }: ProgramCardProps) {
-    const { selectProgram, addToCompare } = useAppStore();
+export function ProgramCard({ program, currentSelection }: ProgramCardProps) {
+    const { selectProgram: selectProgramClient, addToCompare } = useAppStore();
     const { setStep } = useFunnelStore();
     const [showDetails, setShowDetails] = useState(false);
     const router = useRouter();
 
     const handleConfirmSelection = async () => {
         try {
-            // Advance step in database (step 1 -> step 2)
-            await advanceUserStep(2);
+            // Server action to save selection
+            const { selectProgram } = await import("@/actions/student/select-program");
+            const res = await selectProgram(program);
 
-            selectProgram(program);
-            setStep(FunnelStep.DOCUMENTS_UPLOAD);
-            setShowDetails(false);
-            router.push("/documents");
+            if (res.success) {
+                // Client store update (optional, but good for immediate UI)
+                selectProgramClient(program);
+                setStep(FunnelStep.DOCUMENTS_UPLOAD); // Update funnel step
+                setShowDetails(false);
+                toast.success(res.message);
+                router.push("/documents"); // Move to next step
+            } else {
+                toast.error(res.message);
+            }
         } catch (error) {
             toast.error("Bir hata oluştu. Lütfen tekrar deneyin.");
             console.error(error);
         }
     };
 
+    const isSelected = currentSelection?.id === program.id;
+    const hasSelection = !!currentSelection;
+
     return (
         <>
-            <Card className="flex flex-col h-full hover:shadow-lg transition-shadow border-t-4 border-primary">
+            <Card className={`flex flex-col h-full hover:shadow-lg transition-shadow border-t-4 ${isSelected ? "border-green-500 ring-2 ring-green-500 ring-offset-2" : "border-primary"}`}>
                 <CardHeader className="pb-4">
                     <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
@@ -50,7 +61,10 @@ export function ProgramCard({ program }: ProgramCardProps) {
                                 <p className="text-sm text-gray-500">{program.university}</p>
                             </div>
                         </div>
-                        {program.rating >= 90 && (
+                        {isSelected && (
+                            <Badge className="bg-green-600 hover:bg-green-700">Seçildi</Badge>
+                        )}
+                        {!isSelected && program.rating >= 90 && (
                             <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 shrink-0">
                                 %{program.rating} Uygun
                             </Badge>
@@ -86,8 +100,12 @@ export function ProgramCard({ program }: ProgramCardProps) {
                     <Button variant="outline" size="sm" onClick={() => addToCompare(program)}>
                         Karşılaştır
                     </Button>
-                    <Button size="sm" onClick={() => setShowDetails(true)} className="bg-primary hover:bg-primary/90">
-                        Seç ve İlerle
+                    <Button
+                        size="sm"
+                        onClick={() => setShowDetails(true)}
+                        className={isSelected ? "bg-green-600 hover:bg-green-700" : hasSelection ? "bg-orange-600 hover:bg-orange-700" : "bg-primary hover:bg-primary/90"}
+                    >
+                        {isSelected ? "Seçildi" : hasSelection ? "Programı Değiştir" : "Seç ve İlerle"}
                     </Button>
                 </CardFooter>
             </Card>
