@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-export default function MagicLoginPage() {
+function MagicLoginContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const token = searchParams.get("token");
@@ -73,5 +73,18 @@ export default function MagicLoginPage() {
                 </button>
             </div>
         </div>
+    );
+}
+
+export default function MagicLoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+                <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
+                <p className="text-gray-600 font-medium">Yükleniyor...</p>
+            </div>
+        }>
+            <MagicLoginContent />
+        </Suspense>
     );
 }
