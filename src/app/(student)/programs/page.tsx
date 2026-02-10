@@ -4,8 +4,12 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import ProgramsClient from "./ProgramsClient";
 import { Program } from "@/lib/data/programs";
+import { requireStep } from "@/lib/step-protection";
 
 export default async function ProgramsPage() {
+    // Require Step 1+ (accessible right after registration)
+    await requireStep(1);
+
     const session = await auth();
     let selectedProgram: Program | null = null;
 

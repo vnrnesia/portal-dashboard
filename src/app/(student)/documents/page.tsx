@@ -5,8 +5,20 @@ import { getDocuments } from "@/actions/documents";
 import { requireStep } from "@/lib/step-protection";
 
 export default async function DocumentsPage() {
-    // Require Step 2 to access this page
-    await requireStep(2);
+    // Require Step 3 (Evrak) to access this page
+    await requireStep(3);
+
+    // Fetch user phone to check if we need to show verification modal
+    const { db } = await import("@/db");
+    const { users } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const { auth } = await import("@/auth");
+
+    const session = await auth();
+    const user = await db.query.users.findFirst({
+        where: eq(users.id, session?.user?.id as string),
+        columns: { phone: true }
+    });
 
     const docs = await getDocuments();
 
@@ -25,7 +37,7 @@ export default async function DocumentsPage() {
                 </div>
             </div>
 
-            <DocumentUploadList initialDocuments={docs} />
+            <DocumentUploadList initialDocuments={docs} userPhone={user?.phone || null} />
         </div>
     );
 }

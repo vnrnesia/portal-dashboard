@@ -47,15 +47,29 @@ function TranslationDocItem({ doc, onPreview, onStatusChange }: TranslationDocIt
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
         if (file) {
-            const fakeUrl = URL.createObjectURL(file);
-
             try {
-                // Save to database
-                await uploadDocument(doc.type, file.name, fakeUrl, doc.label);
-                onStatusChange(doc.id, "uploaded", file.name, fakeUrl, doc.type, doc.label);
+                // Upload file to server via API
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("type", doc.type);
+
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.message);
+                }
+
+                // Save to database with the server-returned URL
+                await uploadDocument(doc.type, result.fileName, result.fileUrl, doc.label);
+                onStatusChange(doc.id, "uploaded", result.fileName, result.fileUrl, doc.type, doc.label);
                 toast.success(`${doc.label} yüklendi.`);
             } catch (error) {
-                toast.error("Yükleme başarısız oldu.");
+                toast.error(error instanceof Error ? error.message : "Yükleme başarısız oldu.");
             }
         }
     }, [doc.id, doc.type, doc.label, onStatusChange]);

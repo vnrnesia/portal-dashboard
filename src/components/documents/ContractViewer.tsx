@@ -129,11 +129,24 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
         const file = e.target.files?.[0];
         if (file) {
             try {
-                // In a real app, upload to S3/Blob storage here and get URL.
-                // For now, we simulate with a fake URL or base64.
-                const fakeUrl = URL.createObjectURL(file);
+                // Upload file to the server
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("type", "signed_contract");
 
-                await uploadContract(file.name, fakeUrl);
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    toast.error(result.message || "Dosya yüklenemedi.");
+                    return;
+                }
+
+                await uploadContract(file.name, result.fileUrl);
                 setLocalUploadedFileName(file.name);
                 toast.success("İmzalı sözleşme yüklendi.");
             } catch (error) {
@@ -689,7 +702,15 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
                                     </Button>
                                     <Button
                                         className="w-full sm:w-auto bg-green-600 hover:bg-green-700 shadow-sm"
-                                        onClick={() => router.push("/translation")}
+                                        onClick={async () => {
+                                            try {
+                                                const { advanceUserStep } = await import("@/actions/advance-step");
+                                                await advanceUserStep(5);
+                                                window.location.reload();
+                                            } catch (error) {
+                                                // Step advancement failed
+                                            }
+                                        }}
                                     >
                                         Sonraki Adıma Geç
                                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -705,7 +726,15 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
                             <div className="flex justify-end mt-4">
                                 <Button
                                     className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-                                    onClick={() => router.push("/translation")}
+                                    onClick={async () => {
+                                        try {
+                                            const { advanceUserStep } = await import("@/actions/advance-step");
+                                            await advanceUserStep(5);
+                                            window.location.reload();
+                                        } catch (error) {
+                                            // Step advancement failed
+                                        }
+                                    }}
                                 >
                                     <Check className="mr-2 h-4 w-4" />
                                     Sözleşme Onaylandı - Sonraki Adım

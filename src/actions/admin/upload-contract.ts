@@ -5,6 +5,8 @@ import { documents, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
 
 // Step 4 (Sözleşme) -> Step 5 (Tercüme) when admin uploads contract
 const STEP_AFTER_CONTRACT = 5;
@@ -33,8 +35,19 @@ export async function uploadAdminContract(userId: string, formData: FormData) {
     }
 
     try {
-        const fileName = file.name;
-        const fileUrl = `/mock-uploads/${fileName}`;
+        // File upload logic - write to disk
+        const uploadDir = join(process.cwd(), "public", "uploads");
+        await mkdir(uploadDir, { recursive: true });
+
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+        const extension = file.name.split('.').pop();
+        const fileName = `contract-${userId}-${uniqueSuffix}.${extension}`;
+        const filePath = join(uploadDir, fileName);
+        const fileUrl = `/uploads/${fileName}`;
+
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filePath, buffer);
 
         // Check if exists
         const existing = await db.query.documents.findFirst({
@@ -48,7 +61,7 @@ export async function uploadAdminContract(userId: string, formData: FormData) {
             await db.update(documents)
                 .set({
                     status: "approved",
-                    fileName: fileName,
+                    fileName: file.name,
                     fileUrl: fileUrl,
                     updatedAt: new Date()
                 })
@@ -59,7 +72,7 @@ export async function uploadAdminContract(userId: string, formData: FormData) {
                 type: "admin_contract",
                 label: "Yönetici Sözleşmesi",
                 status: "approved",
-                fileName: fileName,
+                fileName: file.name,
                 fileUrl: fileUrl
             });
         }
@@ -88,3 +101,4 @@ export async function uploadAdminContract(userId: string, formData: FormData) {
         return { success: false, message: "Veritabanı hatası." };
     }
 }
+

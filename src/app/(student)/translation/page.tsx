@@ -4,8 +4,8 @@ import { requireStep } from "@/lib/step-protection";
 import TranslationUploadClient from "./TranslationUploadClient";
 
 export default async function TranslationPage() {
-    // Require Step 4 to access this page
-    await requireStep(4);
+    // Require Step 5 (Tercüme) to access this page
+    await requireStep(5);
 
     const session = await auth();
     const docs = await getDocuments();

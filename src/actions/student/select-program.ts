@@ -14,10 +14,18 @@ export async function selectProgram(program: Program) {
     }
 
     try {
+        // Get current step to prevent regression
+        const currentUser = await db.query.users.findFirst({
+            where: eq(users.id, session.user.id),
+            columns: { onboardingStep: true }
+        });
+        const currentStep = currentUser?.onboardingStep || 1;
+
         await db.update(users)
             .set({
                 selectedProgram: program,
-                onboardingStep: 3 // Move to Evrak (Step 3) after selecting program
+                // Only advance step if user is at step 1 or 2 (don't regress users past step 3)
+                ...(currentStep <= 2 ? { onboardingStep: 3 } : {})
             })
             .where(eq(users.id, session.user.id));
 

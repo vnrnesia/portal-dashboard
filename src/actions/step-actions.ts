@@ -23,16 +23,23 @@ export async function advanceStep(targetStep: number) {
 
         if (!currentUser) return { success: false, message: "Kullanıcı bulunamadı." };
 
-        if ((currentUser.onboardingStep || 1) < targetStep) {
-            await db.update(users)
-                .set({ onboardingStep: targetStep })
-                .where(eq(users.id, session.user.id));
+        const currentStep = currentUser.onboardingStep || 1;
 
-            revalidatePath("/");
-            return { success: true };
+        // Only allow advancing to the immediate next step (prevent skipping)
+        if (targetStep !== currentStep + 1) {
+            return {
+                success: false,
+                message: "Sadece bir sonraki adıma geçebilirsiniz."
+            };
         }
 
-        return { success: true, message: "Zaten bu adımdasınız." };
+        // Update to next step
+        await db.update(users)
+            .set({ onboardingStep: targetStep })
+            .where(eq(users.id, session.user.id));
+
+        revalidatePath("/");
+        return { success: true };
 
     } catch (error) {
         console.error("Step update error:", error);

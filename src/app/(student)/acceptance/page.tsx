@@ -9,8 +9,12 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { VisaTrackingForm } from "@/components/visa/VisaTrackingForm";
+import { requireStep } from "@/lib/step-protection";
 
 export default async function AcceptancePage() {
+    // Require Step 7 (Kabul & Vize) to access this page
+    await requireStep(7);
+
     const session = await auth();
     if (!session?.user?.id) redirect("/");
 

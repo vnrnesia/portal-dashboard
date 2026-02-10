@@ -5,8 +5,8 @@ import { getProfile } from "@/actions/profile";
 import { requireStep } from "@/lib/step-protection";
 
 export default async function ContractPage() {
-    // Require Step 3 to access this page
-    await requireStep(3);
+    // Require Step 4 (Sözleşme) to access this page
+    await requireStep(4);
 
     const session = await auth();
     const docs = await getDocuments();

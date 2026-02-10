@@ -16,6 +16,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { PhoneVerificationModal } from "@/components/profile/PhoneVerificationModal";
 import { updateDocumentStatus, uploadContract, uploadDocument, deleteDocument, submitDocumentsForReview } from "@/actions/documents";
 
 // Define Document interface locally to avoid undefined issues if store is removed
@@ -61,7 +62,11 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
             setUploadProgress(0);
 
             try {
-                // Simulate upload progress
+                // Upload file to server via API
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("type", doc.type);
+
                 const progressInterval = setInterval(() => {
                     setUploadProgress(prev => {
                         if (prev >= 90) {
@@ -72,12 +77,23 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
                     });
                 }, 100);
 
-                const url = URL.createObjectURL(file);
-                await onStatusChange(doc.id, 'uploaded', file.name, url, doc.type, doc.label);
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                });
 
                 clearInterval(progressInterval);
-                setUploadProgress(100);
 
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.message);
+                }
+
+                // Use the server-returned URL (persisted file path)
+                await onStatusChange(doc.id, 'uploaded', result.fileName, result.fileUrl, doc.type, doc.label);
+
+                setUploadProgress(100);
                 toast.success(`${doc.label} başarıyla yüklendi: ${file.name}`);
 
                 setTimeout(() => {
@@ -87,7 +103,7 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
             } catch (error) {
                 setIsUploading(false);
                 setUploadProgress(0);
-                toast.error("Yükleme sırasında bir hata oluştu.");
+                toast.error(error instanceof Error ? error.message : "Yükleme sırasında bir hata oluştu.");
             }
         }
     }, [doc.id, doc.type, doc.label, onStatusChange]);
@@ -200,9 +216,17 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
     );
 }
 
-export function DocumentUploadList({ initialDocuments }: { initialDocuments: any[] }) {
-    // Merge initial DB docs with required list. 
-    // In a real app, the DB should be the source of truth, but for now we might need to ensuring 
+interface DocumentUploadListProps {
+    initialDocuments: any[];
+    userPhone: string | null;
+}
+
+export function DocumentUploadList({ initialDocuments, userPhone: initialUserPhone }: DocumentUploadListProps) {
+    const [userPhone, setUserPhone] = useState<string | null>(initialUserPhone);
+    const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+
+    // Merge initial DB docs with required list.
+    // In a real app, the DB should be the source of truth, but for now we might need to ensuring
     // required document types exist in the UI even if not in DB yet.
 
     // Simplification: We will just use the passed documents for now, assuming parent does the merging if needed.
@@ -276,6 +300,16 @@ export function DocumentUploadList({ initialDocuments }: { initialDocuments: any
     );
 
     const handleSubmit = async () => {
+        // 1. Check if user has phone number. If not, open modal.
+        if (!userPhone) {
+            setIsPhoneModalOpen(true);
+            return;
+        }
+
+        await processSubmission();
+    };
+
+    const processSubmission = async () => {
         setIsSubmitting(true);
 
         // Check if already in review and no uploaded docs
@@ -346,6 +380,19 @@ export function DocumentUploadList({ initialDocuments }: { initialDocuments: any
                     animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
                 }
             `}</style>
+
+            <PhoneVerificationModal
+                isOpen={isPhoneModalOpen}
+                onClose={() => setIsPhoneModalOpen(false)}
+                onSuccess={() => {
+                    // Optimistically set a value (actual value doesn't matter much for local state check,
+                    // just needs to be truthy to pass the check in next submit)
+                    setUserPhone("verified");
+                    setIsPhoneModalOpen(false);
+                    // Automatically proceed to submission
+                    processSubmission();
+                }}
+            />
 
             <Dialog open={!!previewDoc} onOpenChange={(open) => !open && setPreviewDoc(null)}>
                 <DialogContent className="max-w-3xl h-[80vh] flex flex-col">

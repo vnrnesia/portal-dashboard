@@ -5,6 +5,8 @@ import { documents, users } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
 
 // Step 6 (Başvuru) -> Step 7 (Kabul & Vize) when invitation letter uploaded
 const STEP_AFTER_INVITATION = 7;
@@ -40,8 +42,19 @@ export async function uploadInvitationLetter(userId: string, formData: FormData)
             return { success: false, message: "Öğrencinin onaylı tercüme evrakları bulunmadan davet mektubu yüklenemez." };
         }
 
-        const fileName = file.name;
+        // File upload logic - write to disk
+        const uploadDir = join(process.cwd(), "public", "uploads");
+        await mkdir(uploadDir, { recursive: true });
+
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+        const extension = file.name.split('.').pop();
+        const fileName = `invitation-${userId}-${uniqueSuffix}.${extension}`;
+        const filePath = join(uploadDir, fileName);
         const fileUrl = `/uploads/${fileName}`;
+
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filePath, buffer);
 
         // Check if invitation letter already exists
         const existingDoc = await db.query.documents.findFirst({

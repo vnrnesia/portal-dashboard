@@ -13,9 +13,10 @@ interface ApplicationStatusClientProps {
         fileName: string;
         fileUrl: string;
     } | null;
+    currentStep: number;
 }
 
-export default function ApplicationStatusClient({ invitationLetter }: ApplicationStatusClientProps) {
+export default function ApplicationStatusClient({ invitationLetter, currentStep }: ApplicationStatusClientProps) {
     const [submissionDate, setSubmissionDate] = useState<string>("");
     const router = useRouter();
 
@@ -130,17 +131,18 @@ export default function ApplicationStatusClient({ invitationLetter }: Applicatio
                         )}
                     </div>
 
-                    {invitationLetter && (
+                    {invitationLetter && currentStep < 8 && (
                         <div className="pt-4 flex justify-end">
                             <Button
                                 size="lg"
                                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
                                 onClick={async () => {
-                                    // Advance to step 6 (Acceptance)
-                                    const { advanceStep } = await import("@/actions/step-actions");
-                                    const result = await advanceStep(6);
-                                    if (result.success) {
-                                        router.push("/acceptance");
+                                    try {
+                                        const { advanceUserStep } = await import("@/actions/advance-step");
+                                        await advanceUserStep(currentStep + 1);
+                                        window.location.reload();
+                                    } catch (error) {
+                                        // Step advancement failed — already at max or invalid
                                     }
                                 }}
                             >
