@@ -61,7 +61,8 @@ export async function advanceUserStep(targetStep: number) {
     await db.update(users)
         .set({
             onboardingStep: targetStep,
-            stepApprovalStatus: "pending"
+            stepApprovalStatus: "pending",
+            updatedAt: new Date()
         })
         .where(eq(users.id, session.user.id));
 

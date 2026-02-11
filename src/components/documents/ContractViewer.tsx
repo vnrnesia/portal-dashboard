@@ -195,8 +195,14 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
     const handleSubmitForApproval = async () => {
         if (!contractDoc?.id) return;
         try {
-            await updateDocumentStatus(contractDoc.id, "reviewing");
-            toast.success("Sözleşme onaya gönderildi.");
+            const { submitDocumentsForReview } = await import("@/actions/documents");
+            const result = await submitDocumentsForReview(4);
+
+            if (result.success) {
+                toast.success("Sözleşme başarıyla onaya gönderildi.");
+            } else {
+                toast.error(result.message || "İşlem başarısız.");
+            }
         } catch (error) {
             toast.error("İşlem başarısız.");
         }

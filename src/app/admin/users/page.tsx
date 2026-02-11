@@ -14,6 +14,8 @@ import Link from "next/link";
 import { Eye, Users, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { APPLICATION_STEPS } from "@/lib/constants";
+import { formatDistanceToNow, differenceInHours } from "date-fns";
+import { tr } from "date-fns/locale";
 
 interface PageProps {
     searchParams: Promise<{ step?: string }>;
@@ -107,7 +109,6 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                             <TableRow>
                                 <TableHead>Öğrenci</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>Kayıt Durumu</TableHead>
                                 <TableHead>Mevcut Aşama</TableHead>
                                 <TableHead className="text-right">İşlemler</TableHead>
                             </TableRow>
@@ -115,7 +116,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                         <TableBody>
                             {students.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
+                                    <TableCell colSpan={4} className="h-24 text-center">
                                         {stepFilter
                                             ? "Bu aşamada öğrenci bulunmuyor."
                                             : "Henüz kayıtlı öğrenci yok."
@@ -123,56 +124,61 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                students.map((student) => (
-                                    <TableRow key={student.id} className="hover:bg-muted/50">
-                                        <TableCell className="font-medium">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="h-9 w-9">
-                                                    <AvatarImage src={student.image || ""} />
-                                                    <AvatarFallback className="bg-primary/10 text-primary">
-                                                        {student.name?.substring(0, 2).toUpperCase()}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <p className="font-medium">{student.name}</p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {student.phone || "Telefon yok"}
-                                                    </p>
+                                students.map((student) => {
+                                    const updatedAt = student.updatedAt ? new Date(student.updatedAt) : new Date(student.createdAt || new Date());
+                                    const timeInStep = formatDistanceToNow(updatedAt, { locale: tr, addSuffix: false });
+                                    const hoursInStep = differenceInHours(new Date(), updatedAt);
+                                    const isOverdue = hoursInStep > 48; // 2 days
+
+                                    return (
+                                        <TableRow key={student.id} className="hover:bg-muted/50">
+                                            <TableCell className="font-medium">
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="h-9 w-9">
+                                                        <AvatarImage src={student.image || ""} />
+                                                        <AvatarFallback className="bg-primary/10 text-primary">
+                                                            {student.name?.substring(0, 2).toUpperCase()}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <p className="font-medium">{student.name}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {student.phone || "Telefon yok"}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="text-sm">{student.email}</span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={student.emailVerified ? "default" : "secondary"}>
-                                                {student.emailVerified ? "Onaylı" : "Beklemede"}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                                                        <span className="text-xs font-bold text-primary">
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="text-sm">{student.email}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                        <span className="text-sm font-bold text-primary">
                                                             {student.onboardingStep || 1}
                                                         </span>
                                                     </div>
-                                                    <span className="text-sm">
-                                                        {stepLabels[student.onboardingStep || 1] || "Bilinmiyor"}
-                                                    </span>
+                                                    <div>
+                                                        <p className="text-sm font-medium">
+                                                            {stepLabels[student.onboardingStep || 1] || "Bilinmiyor"}
+                                                        </p>
+                                                        <p className={`text-xs ${isOverdue ? 'text-red-600 font-bold' : 'text-muted-foreground'}`}>
+                                                            {timeInStep}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button asChild size="sm" variant="outline">
-                                                <Link href={`/admin/users/${student.id}`}>
-                                                    <Eye className="mr-2 h-4 w-4" />
-                                                    İncele
-                                                </Link>
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button asChild size="sm" variant="outline">
+                                                    <Link href={`/admin/users/${student.id}`}>
+                                                        <Eye className="mr-2 h-4 w-4" />
+                                                        İncele
+                                                    </Link>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             )}
                         </TableBody>
                     </Table>

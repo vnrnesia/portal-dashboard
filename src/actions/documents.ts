@@ -263,14 +263,25 @@ export async function submitDocumentsForReview(step?: number) {
     revalidatePath("/translation");
     revalidatePath("/dashboard");
 
-    // Send WhatsApp Notification for Step 3 (Evrak) and Step 5 (Tercüme)
-    if (step === 3 || step === 5) {
+    // Send WhatsApp Notification for Step 3 (Evrak), Step 4 (Contract) and Step 5 (Tercüme)
+    if (step === 3 || step === 4 || step === 5) {
         try {
             const { createNotification } = await import("./notifications");
-            const title = step === 3 ? "Evraklarınız Alındı" : "Tercüme Belgeleriniz Alındı";
-            const message = step === 3
-                ? "Tüm evraklarınız tarafımıza ulaştı, en kısa zamanda inceleyip size döneceğiz."
-                : "Tüm tercüme belgeleriniz tarafımıza ulaştı, en kısa zamanda inceleyip size döneceğiz.";
+
+            let title = "";
+            let message = "";
+
+            if (step === 3) {
+                title = "Evraklarınız Alındı";
+                message = "Tüm evraklarınız tarafımıza ulaştı, en kısa zamanda inceleyip size döneceğiz.";
+            } else if (step === 4) {
+                title = "Sözleşmeniz Alındı";
+                message = "İmzalı sözleşmeniz tarafımıza ulaştı. En kısa sürede incelenip onaylanacaktır.";
+            } else {
+                title = "Tercüme Belgeleriniz Alındı";
+                message = "Tüm tercüme belgeleriniz tarafımıza ulaştı, en kısa zamanda inceleyip size döneceğiz.";
+            }
+
             await createNotification(
                 session.user.id,
                 "document_uploaded",

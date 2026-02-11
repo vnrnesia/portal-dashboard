@@ -123,7 +123,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                             <Link href="/dashboard" className="flex items-center gap-2 px-2 py-2 w-full">
                                 <div className="relative h-10 w-full">
                                     <NextImage
-                                        src="/logo.png"
+                                        src="/logo1.png"
                                         alt="Student Portal Logo"
                                         fill
                                         priority

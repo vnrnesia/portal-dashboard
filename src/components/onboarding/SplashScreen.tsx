@@ -12,7 +12,7 @@ export function SplashScreen() {
                 className="relative mb-8"
             >
                 <img
-                    src="/logo.png"
+                    src="/logo1.png"
                     alt="Logo"
                     className="h-32 w-auto object-contain"
                 />
