@@ -104,11 +104,11 @@ export async function POST(req: Request) {
         // Generate Filename
         const ext = isImage ? "jpg" : "pdf"; // Simplified
         const fileName = `whatsapp_${user.id}_${Date.now()}.${ext}`;
-        const relativePath = `/uploads/${fileName}`;
-        const absolutePath = join(process.cwd(), "public", "uploads", fileName);
+        const relativePath = `/api/uploads/${fileName}`;
+        const absolutePath = join(process.cwd(), "uploads", fileName);
 
         // Ensure directory exists
-        await mkdir(join(process.cwd(), "public", "uploads"), { recursive: true });
+        await mkdir(join(process.cwd(), "uploads"), { recursive: true });
 
         // Save File (Mocking if no real base64)
         if (base64Data) {

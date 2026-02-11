@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Create upload directory if it doesn't exist
-        const uploadDir = join(process.cwd(), "public", "uploads");
+        // Create upload directory if it doesn't exist (outside public/ for runtime persistence)
+        const uploadDir = join(process.cwd(), "uploads");
         await mkdir(uploadDir, { recursive: true });
 
         // Generate unique filename
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         const sanitizedType = type.replace(/[^a-zA-Z0-9_-]/g, '_');
         const fileName = `${sanitizedType}-${session.user.id}-${uniqueSuffix}.${extension}`;
         const filePath = join(uploadDir, fileName);
-        const fileUrl = `/uploads/${fileName}`;
+        const fileUrl = `/api/uploads/${fileName}`;
 
         // Write file to disk
         const bytes = await file.arrayBuffer();

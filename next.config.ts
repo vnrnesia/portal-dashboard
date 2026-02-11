@@ -8,6 +8,15 @@ const nextConfig: NextConfig = {
     },
   },
   reactCompiler: true,
+  // Rewrite old /uploads/ URLs to the new API route for backward compatibility
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: '/api/uploads/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

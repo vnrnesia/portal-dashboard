@@ -43,14 +43,14 @@ export async function uploadInvitationLetter(userId: string, formData: FormData)
         }
 
         // File upload logic - write to disk
-        const uploadDir = join(process.cwd(), "public", "uploads");
+        const uploadDir = join(process.cwd(), "uploads");
         await mkdir(uploadDir, { recursive: true });
 
         const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
         const extension = file.name.split('.').pop();
         const fileName = `invitation-${userId}-${uniqueSuffix}.${extension}`;
         const filePath = join(uploadDir, fileName);
-        const fileUrl = `/uploads/${fileName}`;
+        const fileUrl = `/api/uploads/${fileName}`;
 
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);

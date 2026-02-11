@@ -56,6 +56,9 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Create uploads directory for runtime file uploads (mount as volume in production)
+RUN mkdir -p uploads && chown nextjs:nodejs uploads
+
 USER nextjs
 
 EXPOSE 3000

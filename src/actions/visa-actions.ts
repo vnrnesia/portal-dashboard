@@ -31,14 +31,14 @@ export async function uploadVisaReceipt(formData: FormData) {
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
 
-            const uploadDir = join(process.cwd(), "public", "uploads");
+            const uploadDir = join(process.cwd(), "uploads");
             await mkdir(uploadDir, { recursive: true });
 
             const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
             const extension = file.name.split('.').pop();
             const fileName = `receipt-${session.user.id}-${uniqueSuffix}.${extension}`;
             const filePath = join(uploadDir, fileName);
-            const fileUrl = `/uploads/${fileName}`;
+            const fileUrl = `/api/uploads/${fileName}`;
 
             await writeFile(filePath, buffer);
 
