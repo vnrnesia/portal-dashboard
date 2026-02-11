@@ -14,7 +14,7 @@ export async function generateMagicLink(userId: string) {
         expiresAt
     });
 
-    // Determine base URL (assuming localhost or production URL)
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    // Determine base URL from environment
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || "http://localhost:3000";
     return `${baseUrl}/magic-login?token=${token}`;
 }
