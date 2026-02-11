@@ -345,7 +345,7 @@ export default function TranslationUploadClient({ initialDocuments, userName }: 
             </Card>
 
             <Dialog open={!!previewDoc} onOpenChange={(open) => !open && setPreviewDoc(null)}>
-                <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+                <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle>{previewDoc?.label}</DialogTitle>
                     </DialogHeader>

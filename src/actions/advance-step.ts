@@ -42,6 +42,22 @@ export async function advanceUserStep(targetStep: number) {
         }
     }
 
+    // Step 6: Block advancement until admin uploads the invitation letter
+    if (currentStep === 6) {
+        const { documents } = await import("@/db/schema");
+        const { eq, and } = await import("drizzle-orm");
+        const invitationLetter = await db.query.documents.findFirst({
+            where: and(
+                eq(documents.userId, session.user.id),
+                eq(documents.type, "invitation_letter")
+            )
+        });
+
+        if (!invitationLetter) {
+            throw new Error("Davet mektubu henüz yüklenmedi. Üniversiteden yanıt bekleniyor.");
+        }
+    }
+
     await db.update(users)
         .set({
             onboardingStep: targetStep,

@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { FileText, Download, Check, Loader2, User, Phone, MapPin, ArrowRight, Clock, Edit2, CheckCircle } from "lucide-react";
 import { useAppStore } from "@/lib/stores/useAppStore";
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -45,7 +43,6 @@ interface ContractViewerProps {
 export function ContractViewer({ userName, contractDoc, adminContractDoc, profileData }: ContractViewerProps) {
     const [isExporting, setIsExporting] = useState(false);
     const { selectedProgram } = useAppStore();
-    const contractRef = useRef<HTMLDivElement>(null);
 
     // Check if profile has required data
     const hasProfileData = !!(profileData?.name && profileData?.tcKimlik && profileData?.phone && profileData?.address);
@@ -157,87 +154,34 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
     };
 
     const handleDownloadPdf = async () => {
-        if (!contractRef.current) {
-            toast.error("Sözleşme içeriği bulunamadı.");
-            return;
-        }
-
         setIsExporting(true);
 
         try {
-            // Create canvas
-            const canvas = await html2canvas(contractRef.current, {
-                scale: 2,
-                useCORS: true,
-                logging: false, // Logları kapattık performans için
-                onclone: (clonedDoc) => {
-                    // 1. Overwrite all CSS variables that might use oklch/lab with safe HEX values
-                    // This prevents html2canvas from resolving vars to unsupported functions
-                    const body = clonedDoc.body;
-                    body.style.setProperty('--background', '#ffffff');
-                    body.style.setProperty('--foreground', '#000000');
-                    body.style.setProperty('--primary', '#000000');
-                    body.style.setProperty('--primary-foreground', '#ffffff');
-                    body.style.setProperty('--muted', '#f3f4f6');
-                    body.style.setProperty('--muted-foreground', '#6b7280');
-                    body.style.setProperty('--border', '#e5e7eb');
-                    body.style.setProperty('--input', '#e5e7eb');
-                    body.style.setProperty('--ring', '#000000');
-                    body.style.setProperty('--radius', '0.5rem');
+            const React = await import('react');
+            const { pdf } = await import('@react-pdf/renderer');
+            const { ContractDocument } = await import('@/components/documents/ContractDocument');
 
-                    const content = clonedDoc.querySelector('[data-contract-content]') as HTMLElement;
-                    if (content) {
-                        content.style.boxShadow = 'none';
-                        content.style.backgroundColor = '#ffffff';
-                        content.style.color = '#000000';
-
-                        // 2. Iterate elements to force simple styles (User's logic preserved and enhanced)
-                        const allElements = content.getElementsByTagName('*');
-                        for (let i = 0; i < allElements.length; i++) {
-                            const el = allElements[i] as HTMLElement;
-                            el.style.color = '#000000';
-                            el.style.borderColor = '#000000';
-                            el.style.boxShadow = 'none';
-
-                            // Specific fix for gray backgrounds
-                            if (el.classList.contains('bg-gray-50')) {
-                                el.style.backgroundColor = '#f9fafb';
-                                el.style.borderColor = '#d1d5db';
-                            } else {
-                                el.style.backgroundColor = 'transparent';
-                            }
-                        }
-                    }
-                }
+            const element = React.createElement(ContractDocument, {
+                studentName,
+                tcNo: contractDetails.tcNo,
+                phone: contractDetails.phone,
+                address: contractDetails.address,
+                universityName,
+                programName,
+                date: currentDate,
             });
 
-            const imgData = canvas.toDataURL('image/png');
+            const blob = await pdf(element as any).toBlob();
 
-            // Initialize PDF
-            const jsPDF = (await import('jspdf')).default;
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Portal_Sozlesmesi_${studentName.replace(/\s+/g, '_')}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
 
-            const imgWidth = 210;
-            const pageHeight = 297;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-            }
-
-            pdf.save(`Portal_Sozlesmesi_${studentName.replace(/\s+/g, '_')}.pdf`);
             toast.success("Sözleşme PDF'i indirildi.");
         } catch (error) {
             console.error("PDF Export Error:", error);
@@ -502,7 +446,6 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
                     <ScrollArea className="h-[400px] w-full p-4">
                         {/* Compact Preview - Reusing safe rendering logic */}
                         <div
-                            ref={contractRef}
                             data-contract-content
                             className="max-w-[210mm] mx-auto p-[10mm] font-serif text-[10pt] origin-top scale-90"
                             style={{

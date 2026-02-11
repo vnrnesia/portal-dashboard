@@ -7,6 +7,7 @@ import { eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { createNotification } from "@/actions/notifications";
 
 // Step 6 (Başvuru) -> Step 7 (Kabul & Vize) when invitation letter uploaded
 const STEP_AFTER_INVITATION = 7;
@@ -95,11 +96,21 @@ export async function uploadInvitationLetter(userId: string, formData: FormData)
             await db.update(users)
                 .set({ onboardingStep: STEP_AFTER_INVITATION })
                 .where(eq(users.id, userId));
+
+            // Send congratulations notification
+            await createNotification(
+                userId,
+                "step_completed",
+                "Tebrikler! Üniversiteye Kabul Edildiniz 🎉",
+                "Üniversiteden davet mektubunuz geldi! Davet mektubunuzu panelden görüntüleyebilirsiniz. Bir sonraki adım olarak vize sürecine geçilecektir. Herhangi bir sorunuz olursa bize ulaşabilirsiniz.",
+                { step: 6 }
+            );
         }
 
         revalidatePath(`/admin/users/${userId}`);
         revalidatePath("/admin/dashboard");
         revalidatePath("/application-status");
+        revalidatePath("/dashboard");
 
         return { success: true, message: "Davet mektubu yüklendi ve öğrenci bir sonraki aşamaya geçirildi." };
 

@@ -29,10 +29,13 @@ export async function getDocumentReviewStatus(step?: number) {
     const { STEP_REQUIREMENTS } = await import("@/lib/constants");
     const requiredTypes: string[] = step ? (STEP_REQUIREMENTS[step] || []) : [];
 
-    // If step is provided and has requirements, filter by those types
+    // If step is provided and has requirements, filter by those types.
+    // If step is provided but has NO requirements (e.g. Step 6), relevantDocs should be empty.
     let relevantDocs = docs;
     if (requiredTypes.length > 0) {
         relevantDocs = docs.filter(doc => requiredTypes.includes(doc.type));
+    } else if (step) {
+        relevantDocs = [];
     }
 
     const hasDocumentsInReview = relevantDocs.some(doc => doc.status === "reviewing");
@@ -63,10 +66,19 @@ export async function getDocumentReviewStatus(step?: number) {
 
     // Determine finalStepStatus:
     // - If allApproved (all docs present & approved), status is "approved"
+    // - If required docs exist but none uploaded, force "pending" (don't trust stale dbStatus)
     // - If admin explicitly set stepApprovalStatus to "approved" (via manage-document auto-check), trust it
     // - Otherwise use DB status (typically "pending")
     const dbStatus = user?.stepApprovalStatus || "pending";
-    const finalStepStatus = allApproved ? "approved" : dbStatus;
+    let finalStepStatus: string;
+    if (allApproved) {
+        finalStepStatus = "approved";
+    } else if (requiredTypes.length > 0 && relevantDocs.length === 0) {
+        // Required documents exist for this step but none uploaded — always pending
+        finalStepStatus = "pending";
+    } else {
+        finalStepStatus = dbStatus;
+    }
 
     return {
         hasDocumentsInReview,
@@ -251,15 +263,19 @@ export async function submitDocumentsForReview(step?: number) {
     revalidatePath("/translation");
     revalidatePath("/dashboard");
 
-    // Send WhatsApp Notification for Step 3 (Evrak)
-    if (step === 3) {
+    // Send WhatsApp Notification for Step 3 (Evrak) and Step 5 (Tercüme)
+    if (step === 3 || step === 5) {
         try {
             const { createNotification } = await import("./notifications");
+            const title = step === 3 ? "Evraklarınız Alındı" : "Tercüme Belgeleriniz Alındı";
+            const message = step === 3
+                ? "Tüm evraklarınız tarafımıza ulaştı, en kısa zamanda inceleyip size döneceğiz."
+                : "Tüm tercüme belgeleriniz tarafımıza ulaştı, en kısa zamanda inceleyip size döneceğiz.";
             await createNotification(
                 session.user.id,
                 "document_uploaded",
-                "Evraklarınız Alındı",
-                "Tüm evraklarınız tarafımıza ulaştı, en kısa zamanda inceleyip size döneceğiz."
+                title,
+                message
             );
         } catch (error) {
             console.error("Failed to send WhatsApp notification:", error);

@@ -94,26 +94,33 @@ export default function DashboardPage() {
                 <div className="md:col-span-2 space-y-6">
 
                     {/* CTA Card for Next Step */}
-                    <div className={`p-8 rounded-2xl text-white shadow-xl relative overflow-hidden ${currentStep >= 8
+                    <div className={`p-8 rounded-2xl text-white shadow-xl relative overflow-hidden ${currentStep > 8 || (currentStep === 8 && isApproved)
                         ? "bg-gradient-to-br from-green-500 to-green-700"
-                        : currentStep === 5
-                            ? "bg-gradient-to-br from-blue-500 to-blue-700"
-                            : isApproved
-                                ? "bg-gradient-to-br from-green-500 to-green-700"
-                                : isInReview
-                                    ? "bg-gradient-to-br from-yellow-500 to-yellow-700"
-                                    : "bg-gradient-to-br from-primary to-orange-700"
+                        : currentStep === 8
+                            ? "bg-gradient-to-br from-cyan-600 to-blue-600"
+                            : currentStep === 6
+                                ? "bg-gradient-to-br from-blue-500 to-blue-700"
+                                : isApproved
+                                    ? "bg-gradient-to-br from-green-500 to-green-700"
+                                    : isInReview
+                                        ? "bg-gradient-to-br from-yellow-500 to-yellow-700"
+                                        : "bg-gradient-to-br from-primary to-orange-700"
                         }`}>
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 pointer-events-none" />
 
                         <div className="relative z-10 space-y-4">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-sm backdrop-blur-sm">
-                                {currentStep >= 8 ? (
+                                {currentStep > 8 || (currentStep === 8 && isApproved) ? (
                                     <>
                                         <CheckCircle2 className="w-4 h-4 text-white" />
                                         <span className="font-medium">Tamamlandı</span>
                                     </>
-                                ) : currentStep === 5 ? (
+                                ) : currentStep === 8 ? (
+                                    <>
+                                        <Clock className="w-4 h-4 text-white" />
+                                        <span className="font-medium">Planlanıyor</span>
+                                    </>
+                                ) : currentStep === 6 ? (
                                     <>
                                         <Clock className="w-4 h-4 text-white" />
                                         <span className="font-medium">Beklemede</span>
@@ -137,9 +144,11 @@ export default function DashboardPage() {
                             </div>
                             <div>
                                 <h2 className="text-3xl font-bold mb-2">{currentLabel}</h2>
-                                <p className={`text-lg max-w-lg ${currentStep >= 8 ? "text-green-100" : currentStep === 5 ? "text-blue-100" : isApproved ? "text-green-100" : "text-orange-100"}`}>
+                                <p className={`text-lg max-w-lg ${currentStep >= 8 ? "text-white/90" : currentStep === 6 ? "text-blue-100" : isApproved ? "text-green-100" : isInReview ? "text-yellow-100" : "text-orange-100"}`}>
                                     {(() => {
-                                        if (currentStep >= 8) return "Tebrikler! Tüm başvuru sürecinizi tamamladınız.";
+                                        if (currentStep > 8 || (currentStep === 8 && isApproved)) return "Tebrikler! Tüm başvuru sürecinizi tamamladınız.";
+                                        if (currentStep === 8) return "Uçuş ve karşılama detaylarınız danışmanlarımız tarafından planlanıyor. Biletiniz yüklendiğinde size bilgi verilecektir.";
+                                        if (currentStep === 6) return "Evraklarınızı üniversiteye ilettik, bu işlem 15 güne kadar sürebilir. Davetiyeniz yüklendiğinde sizinle iletişime geçilecektir.";
                                         if (isApproved) return "Bu aşamayı başarıyla tamamladınız. Bir sonraki adıma geçebilirsiniz.";
 
                                         switch (currentStep) {
@@ -148,7 +157,6 @@ export default function DashboardPage() {
                                             case 3: return isInReview ? "Belgeleriniz inceleniyor. Onaylandığında bir sonraki aşamaya geçebileceksiniz." : "Başvuru için gerekli belgeleri eksiksiz yüklemelisiniz.";
                                             case 4: return isInReview ? "Sözleşmeniz kontrol ediliyor." : "Sürecin başlaması için hizmet sözleşmesini onaylamanız gerekmektedir.";
                                             case 5: return isInReview ? "Belgeleriniz tercüme ve kontrol aşamasında." : "Tercüme ettiğiniz belgeleri yüklemek için bu adımdan devam edin.";
-                                            case 6: return "Üniversite başvurularınız yapılıyor. Sonuçlar bekleniyor.";
                                             case 7: return "Kabul mektubunuz geldiğinde vize sürecine geçeceğiz.";
                                             default: return "Başvuru sürecini tamamlamak için bu adımı bitirmelisin.";
                                         }
@@ -158,13 +166,13 @@ export default function DashboardPage() {
                             <div className="pt-2">
                                 {currentStep >= 8 ? (
                                     // Final step reached — no more advancement
-                                    <Button asChild size="lg" className="bg-white text-green-600 hover:bg-gray-100 font-bold border-0 cursor-pointer">
+                                    <Button asChild size="lg" className="bg-white text-primary hover:bg-gray-100 font-bold border-0 cursor-pointer text-blue-600">
                                         <Link href="/flight">
                                             Detayları Gör
                                             <ArrowRight className="ml-2 h-5 w-5" />
                                         </Link>
                                     </Button>
-                                ) : isApproved ? (
+                                ) : (isApproved && currentStep !== 6) ? (
                                     <Button
                                         size="lg"
                                         className="bg-white text-green-600 hover:bg-gray-100 font-bold border-0 cursor-pointer"
@@ -197,16 +205,17 @@ export default function DashboardPage() {
                                         </Button>
                                     </div>
                                 ) : (
-                                    <Button asChild size="lg" className={`font-bold border-0 cursor-pointer ${currentStep === 5
+                                    <Button asChild size="lg" className={`font-bold border-0 cursor-pointer ${currentStep === 6
                                         ? "bg-white text-blue-600 hover:bg-gray-100"
                                         : "bg-white text-primary hover:bg-gray-100"
                                         }`}>
                                         <Link href={nextPath}>
-                                            {currentStep === 5 ? "Belgeleri Yükle"
+                                            {currentStep === 6 ? "Durumu Gör"
                                                 : isInReview ? "Durumu Gör"
                                                     : currentStep === 3 ? "Belge Yükle"
                                                         : currentStep === 4 ? "Sözleşmeyi İmzala"
-                                                            : "Devam Et"}
+                                                            : currentStep === 5 ? "Belgeleri Yükle"
+                                                                : "Devam Et"}
                                             <ArrowRight className="ml-2 h-5 w-5" />
                                         </Link>
                                     </Button>
