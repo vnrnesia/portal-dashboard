@@ -16,6 +16,7 @@ import {
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 import { auth } from "@/auth"
+import { redirect } from "next/navigation"
 
 export default async function StudentLayout({
     children,
@@ -36,6 +37,11 @@ export default async function StudentLayout({
         });
 
         if (dbUser) {
+            // If user is admin, redirect to admin dashboard
+            if (dbUser.role === "admin") {
+                redirect("/admin/dashboard");
+            }
+
             user = {
                 ...session.user,
                 name: dbUser.name,

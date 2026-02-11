@@ -11,10 +11,7 @@ export default function AuthLayout({
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/50 to-transparent" />
 
                 <div className="relative z-20 flex items-center text-lg font-medium">
-                    <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center mr-2 font-bold text-white">
-                        S
-                    </div>
-                    Student Portal
+                    <img src="/logo.png" alt="Logo" className="h-12 w-auto object-contain mr-2" />
                 </div>
                 <div className="relative z-20 mt-auto">
                     <blockquote className="space-y-2">

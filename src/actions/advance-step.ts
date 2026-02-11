@@ -31,6 +31,17 @@ export async function advanceUserStep(targetStep: number) {
         throw new Error("Geçersiz adım ilerlemesi.");
     }
 
+    // Validate that the current step is actually completed/approved before advancing
+    // This server-side check prevents skipping via URL manipulation or UI bugs
+    if (currentStep >= 3 && currentStep <= 5) {
+        const { getDocumentReviewStatus } = await import("./documents");
+        const status = await getDocumentReviewStatus(currentStep);
+
+        if (status.stepApprovalStatus !== "approved") {
+            throw new Error("Bu adımı tamamlamadan bir sonraki adıma geçemezsiniz.");
+        }
+    }
+
     await db.update(users)
         .set({
             onboardingStep: targetStep,

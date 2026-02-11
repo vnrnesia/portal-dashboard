@@ -76,6 +76,9 @@ export async function updateDocumentStatus(docId: string, status: "approved" | "
                 // Custom messages per step
                 if (currentStep === 3) {
                     message = "Tüm evraklarınız onaylandı. Sözleşme adımına başarıyla geçtiniz.";
+                } else if (currentStep === 4) {
+                    title = "Sözleşmeniz Onaylandı ✅";
+                    message = "Sözleşmeniz başarıyla onaylandı. İmzalı sözleşmeyi en kısa süre içerisinde size göndereceğiz. Her zaman bir mesaj uzağınızdayız.";
                 } else if (currentStep === 5) {
                     message = "Tüm evraklarınız başarıyla onaylandı. Evraklarınız üniversiteye iletilecektir. Bu işlem yaklaşık 15 gün sürebilir.";
                 }

@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { createNotification } from "@/actions/notifications";
 
 // Step 4 (Sözleşme) -> Step 5 (Tercüme) when admin uploads contract
 const STEP_AFTER_CONTRACT = 5;
@@ -89,6 +90,15 @@ export async function uploadAdminContract(userId: string, formData: FormData) {
                 .set({ onboardingStep: STEP_AFTER_CONTRACT })
                 .where(eq(users.id, userId));
         }
+
+        // Send notification to student about signed contract
+        await createNotification(
+            userId,
+            "document_approved",
+            "İmzalı Sözleşmeniz Yüklendi 📄",
+            "İmzalı sözleşmeniz sisteme yüklenmiştir. Sözleşmenizi panelden görüntüleyebilir ve bir sonraki adıma geçebilirsiniz. Herhangi bir sorunuz olursa bize ulaşabilirsiniz.",
+            { documentType: "admin_contract" }
+        );
 
         revalidatePath("/admin/dashboard");
         revalidatePath(`/admin/users/${userId}`);

@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { isValidPhoneNumber } from "react-phone-number-input";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { updateUserPhone } from "@/actions/user/update-phone";
 
 const formSchema = z.object({
-    phone: z.string().min(10, {
+    phone: z.string().refine((val) => isValidPhoneNumber(val), {
         message: "Geçerli bir telefon numarası giriniz.",
     }),
 });
@@ -63,16 +65,8 @@ export function PhoneVerificationModal({
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
         try {
-            // Format phone if needed (e.g. remove spaces, ensure +90 prefix)
-            // For now, saving as entered + basic formatting could be added here
-            const formattedPhone = values.phone.replace(/\D/g, ""); // strip non-digits
-
-            // Add TR prefix if missing (simple check)
-            const finalPhone = formattedPhone.startsWith("90")
-                ? formattedPhone
-                : `90${formattedPhone}`;
-
-            const result = await updateUserPhone(finalPhone);
+            // PhoneInput returns E.164 format (e.g. +905551234567), so we can use it directly
+            const result = await updateUserPhone(values.phone);
 
             if (result.success) {
                 toast.success("Telefon numarası kaydedildi.");
@@ -88,21 +82,7 @@ export function PhoneVerificationModal({
         }
     }
 
-    // Phone mask handler
-    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
-        if (value.startsWith("90")) value = value.slice(2); // Remove leading 90 if typed
-        if (value.length > 10) value = value.slice(0, 10); // Max 10 digits (without 90)
-
-        // Format: (5XX) XXX XX XX
-        let formattedValue = "";
-        if (value.length > 0) formattedValue += `(${value.slice(0, 3)})`;
-        if (value.length > 3) formattedValue += ` ${value.slice(3, 6)}`;
-        if (value.length > 6) formattedValue += ` ${value.slice(6, 8)}`;
-        if (value.length > 8) formattedValue += ` ${value.slice(8, 10)}`;
-
-        form.setValue("phone", formattedValue, { shouldValidate: true });
-    };
+    // Phone mask handler removed since PhoneInput handles it
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -126,18 +106,11 @@ export function PhoneVerificationModal({
                                 <FormItem>
                                     <FormLabel>Telefon Numarası</FormLabel>
                                     <FormControl>
-                                        <div className="flex items-center">
-                                            <span className="bg-gray-100 border border-r-0 border-input rounded-l-md px-3 py-2 text-sm text-gray-500">
-                                                +90
-                                            </span>
-                                            <Input
-                                                {...field}
-                                                className="rounded-l-none pl-3"
-                                                placeholder="(5XX) XXX XX XX"
-                                                onChange={handlePhoneChange}
-                                                maxLength={15} // (555) 555 55 55 is 15 chars
-                                            />
-                                        </div>
+                                        <PhoneInput
+                                            placeholder="Telefon numaranızı giriniz"
+                                            defaultCountry="TR"
+                                            {...field}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

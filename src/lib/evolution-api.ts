@@ -26,6 +26,12 @@ export async function sendWhatsAppText(phone: string, text: string) {
         // Evolution API v2 sendText endpoint
         const endpoint = `${url}/message/sendText/${instance}`;
 
+        console.log("Sending WhatsApp Request:", {
+            endpoint,
+            phone: formattedPhone,
+            textLength: text.length
+        });
+
         const response = await fetch(endpoint, {
             method: "POST",
             headers: {
@@ -36,7 +42,7 @@ export async function sendWhatsAppText(phone: string, text: string) {
                 number: formattedPhone,
                 text: text,
                 delay: 1200,
-                linkPreview: false
+                linkPreview: true
             })
         });
 
@@ -51,6 +57,6 @@ export async function sendWhatsAppText(phone: string, text: string) {
             console.log("Evolution API Success:", successData);
         }
     } catch (error) {
-        console.error("Evolution API Request Failed:", error);
+        console.error("Evolution API Request Failed - Catch Block:", error);
     }
 }

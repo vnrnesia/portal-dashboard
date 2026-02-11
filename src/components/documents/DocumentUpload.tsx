@@ -344,7 +344,7 @@ export function DocumentUploadList({ initialDocuments, userPhone: initialUserPho
 
         // Submit to server
         try {
-            const result = await submitDocumentsForReview();
+            const result = await submitDocumentsForReview(3); // Step 3 = Evrak
 
             if (result.success) {
                 toast.success(result.message);

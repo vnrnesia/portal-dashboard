@@ -7,16 +7,26 @@ export const authConfig = {
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user
-            const isOnDashboard = nextUrl.pathname.startsWith("/dashboard")
-            const isLoginPage = nextUrl.pathname.startsWith("/login")
 
-            if (isOnDashboard) {
-                if (isLoggedIn) return true
-                return false // Redirect unauthenticated users to login page
+            const isLoginPage = nextUrl.pathname.startsWith("/login")
+            const isRegisterPage = nextUrl.pathname.startsWith("/register")
+
+            // Protected routes that require authentication
+            const protectedPrefixes = ["/dashboard", "/documents", "/contract", "/translation", "/programs", "/application-status", "/acceptance", "/flight", "/timeline", "/profile", "/notifications", "/admin"]
+            const isProtectedRoute = protectedPrefixes.some(route => nextUrl.pathname.startsWith(route))
+
+            // Protected routes: require login
+            if (isProtectedRoute) {
+                if (!isLoggedIn) return false // redirect to login
+                return true
             }
 
-            if (isLoginPage) {
-                if (isLoggedIn) return Response.redirect(new URL("/dashboard", nextUrl))
+            // Login/Register page: redirect logged-in users to dashboard
+            // (admin redirect happens at layout level since Edge can't read role)
+            if (isLoginPage || isRegisterPage) {
+                if (isLoggedIn) {
+                    return Response.redirect(new URL("/dashboard", nextUrl))
+                }
                 return true
             }
 
@@ -25,3 +35,5 @@ export const authConfig = {
     },
     providers: [], // Providers are configured in auth.ts (Node.js runtime)
 } satisfies NextAuthConfig
+
+

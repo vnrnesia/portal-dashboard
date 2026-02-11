@@ -9,18 +9,14 @@ export function SplashScreen() {
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-24 w-24 bg-primary rounded-3xl flex items-center justify-center text-5xl font-bold text-white shadow-2xl mb-8"
+                className="relative mb-8"
             >
-                S
+                <img
+                    src="/logo.png"
+                    alt="Logo"
+                    className="h-32 w-auto object-contain"
+                />
             </motion.div>
-            <motion.h1
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.5 }}
-                className="text-3xl font-bold text-gray-900"
-            >
-                Student Portal
-            </motion.h1>
             <motion.div
                 className="mt-8 w-48 h-1 bg-gray-100 rounded-full overflow-hidden"
                 initial={{ opacity: 0 }}

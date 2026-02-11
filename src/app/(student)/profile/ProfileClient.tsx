@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { updateProfile, updateProfileImage, ProfileData } from "@/actions/profile";
 import { toast } from "sonner";
 import { User, Phone, MapPin, AlertCircle, Save, Loader2, Camera, X } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface ProfileClientProps {
     initialProfile: {
@@ -60,6 +61,13 @@ export default function ProfileClient({ initialProfile }: ProfileClientProps) {
         setFormData(prev => ({
             ...prev,
             [e.target.name]: e.target.value
+        }));
+    };
+
+    const handlePhoneChange = (fieldName: string, value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            [fieldName]: value
         }));
     };
 
@@ -261,23 +269,23 @@ export default function ProfileClient({ initialProfile }: ProfileClientProps) {
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="phone">Telefon Numarası</Label>
-                            <Input
+                            <PhoneInput
                                 id="phone"
                                 name="phone"
-                                type="tel"
                                 value={formData.phone}
-                                onChange={handleChange}
-                                placeholder="+90 5XX XXX XX XX"
+                                onChange={(value) => handlePhoneChange("phone", value as string)}
+                                defaultCountry="TR"
+                                placeholder="Telefon Numarası"
                             />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="secondaryPhone">2. Telefon Numarası</Label>
-                            <Input
+                            <PhoneInput
                                 id="secondaryPhone"
                                 name="secondaryPhone"
-                                type="tel"
                                 value={formData.secondaryPhone}
-                                onChange={handleChange}
+                                onChange={(value) => handlePhoneChange("secondaryPhone", value as string)}
+                                defaultCountry="TR"
                                 placeholder="Alternatif iletişim numarası"
                             />
                         </div>
@@ -363,13 +371,13 @@ export default function ProfileClient({ initialProfile }: ProfileClientProps) {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="emergencyContactPhone">Telefon Numarası</Label>
-                            <Input
+                            <PhoneInput
                                 id="emergencyContactPhone"
                                 name="emergencyContactPhone"
-                                type="tel"
                                 value={formData.emergencyContactPhone}
-                                onChange={handleChange}
-                                placeholder="+90 5XX XXX XX XX"
+                                onChange={(value) => handlePhoneChange("emergencyContactPhone", value as string)}
+                                defaultCountry="TR"
+                                placeholder="Yakınınızın telefonu"
                             />
                         </div>
                         <div className="space-y-2">

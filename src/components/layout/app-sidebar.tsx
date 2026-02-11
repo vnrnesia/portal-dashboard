@@ -19,6 +19,7 @@ import {
     LifeBuoy,
     Send
 } from "lucide-react";
+import NextImage from "next/image";
 import * as React from "react";
 
 import {
@@ -119,15 +120,17 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <a href="#">
-                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-sidebar-primary-foreground">
-                                    <Command className="size-4 text-white" />
+                            <Link href="/dashboard" className="flex items-center gap-2 px-2 py-2 w-full">
+                                <div className="relative h-10 w-full">
+                                    <NextImage
+                                        src="/logo.png"
+                                        alt="Student Portal Logo"
+                                        fill
+                                        priority
+                                        className="object-contain object-left"
+                                    />
                                 </div>
-                                <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-semibold">Student Portal</span>
-                                    <span className="truncate text-xs">Consultancy App</span>
-                                </div>
-                            </a>
+                            </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>

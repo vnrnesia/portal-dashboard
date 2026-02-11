@@ -9,10 +9,12 @@ import { useFunnelStore } from "@/lib/stores/useFunnelStore";
 import { Truck, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 export default function VisaPage() {
     const { completeStep } = useFunnelStore();
     const [address, setAddress] = useState("");
+    const [phone, setPhone] = useState("");
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -55,7 +57,14 @@ export default function VisaPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="phone">İletişim Telefonu</Label>
-                            <Input id="phone" placeholder="0555..." />
+                            <Label htmlFor="phone">İletişim Telefonu</Label>
+                            <PhoneInput
+                                id="phone"
+                                placeholder="Telefon Numarası"
+                                value={phone}
+                                onChange={(value) => setPhone(value as string)}
+                                defaultCountry="TR"
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="code">Posta Kodu</Label>

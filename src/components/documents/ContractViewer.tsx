@@ -11,6 +11,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadContract, updateDocumentStatus } from "@/actions/documents";
@@ -405,13 +406,13 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
                         <div className="space-y-2">
                             <Label htmlFor="phone">Telefon Numarası</Label>
                             <div className="relative">
-                                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                                <Input
+                                {/* Phone icon is inside PhoneInput or can be omitted as PhoneInput has flags */}
+                                <PhoneInput
                                     id="phone"
-                                    placeholder="05XX XXX XX XX"
-                                    className="pl-9"
+                                    placeholder="Telefon Numarası"
                                     value={contractDetails.phone}
-                                    onChange={(e) => setContractDetails({ ...contractDetails, phone: e.target.value })}
+                                    onChange={(value) => setContractDetails({ ...contractDetails, phone: value as string })}
+                                    defaultCountry="TR"
                                     required
                                 />
                             </div>
@@ -643,7 +644,7 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
                                 </div>
                                 <h4 className="font-semibold text-gray-900">Sözleşme Onaya Gönderildi</h4>
                                 <p className="text-sm text-gray-500 text-center max-w-sm mt-1">
-                                    Belgeniz başarıyla yüklendi ve incelenmek üzere tarafımıza iletildi. Onay durumunu buradan takip edebilirsiniz.
+                                    Belgeniz başarıyla yüklendi ve incelenmek üzere tarafımıza iletildi. Onaylandığında size WhatsApp ile bildirim gelecektir.
                                 </p>
                             </div>
                         ) : !isUploaded ? (
@@ -718,28 +719,17 @@ export function ContractViewer({ userName, contractDoc, adminContractDoc, profil
                                 </div>
                             </div>
                         ) : (
-                            // Fallback if approved but no admin contract yet? 
-                            // User says "Sözleşmeyi imzaladık...". 
-                            // If admin approved but hasnt uploaded the file, we can show generic message or prompt to wait?
-                            // But usually admin approves AND uploads.
-                            // I'll show generic if missing doc.
-                            <div className="flex justify-end mt-4">
-                                <Button
-                                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-                                    onClick={async () => {
-                                        try {
-                                            const { advanceUserStep } = await import("@/actions/advance-step");
-                                            await advanceUserStep(5);
-                                            window.location.reload();
-                                        } catch (error) {
-                                            // Step advancement failed
-                                        }
-                                    }}
-                                >
-                                    <Check className="mr-2 h-4 w-4" />
-                                    Sözleşme Onaylandı - Sonraki Adım
-                                    <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
+                            // Contract approved but admin hasn't uploaded the signed copy yet
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center space-y-3">
+                                <div className="h-12 w-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto">
+                                    <Clock className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-lg text-yellow-900">Sözleşmeniz Onaylandı</h4>
+                                    <p className="text-yellow-800 max-w-sm mx-auto mt-1">
+                                        Sözleşmeniz onaylanmıştır. İmzalı sözleşmeniz danışmanınız tarafından sisteme yüklendiğinde size bildirim gönderilecek ve bir sonraki adıma geçebileceksiniz.
+                                    </p>
+                                </div>
                             </div>
                         )}
                     </div>

@@ -19,37 +19,54 @@ export async function getDocuments() {
 
 export async function getDocumentReviewStatus(step?: number) {
     const session = await auth();
-    if (!session?.user?.id) return { hasDocumentsInReview: false, allApproved: false };
+    if (!session?.user?.id) return { hasDocumentsInReview: false, hasUploadedDocs: false, allApproved: false, stepApprovalStatus: "pending" };
 
     const docs = await db.query.documents.findMany({
         where: eq(documents.userId, session.user.id),
     });
 
-    // Define which document types belong to which step
-    const stepDocTypes: Record<number, string[]> = {
-        3: ["passport", "diploma", "transcript", "biometric_photo"], // Documents (Step 3)
-        4: ["signed_contract"], // Contract (Step 4)
-        5: ["passport_translation", "diploma_translation", "transcript_translation"], // Translation (Step 5)
-    };
+    // Use STEP_REQUIREMENTS as single source of truth for required document types
+    const { STEP_REQUIREMENTS } = await import("@/lib/constants");
+    const requiredTypes: string[] = step ? (STEP_REQUIREMENTS[step] || []) : [];
 
-    // If step is provided, filter by that step's document types
+    // If step is provided and has requirements, filter by those types
     let relevantDocs = docs;
-    if (step && stepDocTypes[step]) {
-        relevantDocs = docs.filter(doc => stepDocTypes[step].includes(doc.type));
+    if (requiredTypes.length > 0) {
+        relevantDocs = docs.filter(doc => requiredTypes.includes(doc.type));
     }
 
-    // Treat 'uploaded' as in-review for UI feedback if not all are approved yet
     const hasDocumentsInReview = relevantDocs.some(doc => doc.status === "reviewing");
     const hasUploadedDocs = relevantDocs.some(doc => doc.status === "uploaded");
-    const allApproved = relevantDocs.length > 0 && relevantDocs.every(doc => doc.status === "approved");
+
+    // Check if ALL required documents for the step are present and approved
+    let allApproved = false;
+    if (requiredTypes.length > 0) {
+        allApproved = requiredTypes.every((type: string) =>
+            relevantDocs.some(doc => doc.type === type && doc.status === "approved")
+        );
+    } else if (relevantDocs.length > 0) {
+        allApproved = relevantDocs.every(doc => doc.status === "approved");
+    }
+
+    // Special check for Step 4 (Contract): admin_contract must also exist
+    if (step === 4 && allApproved) {
+        const adminContract = docs.find(doc => doc.type === "admin_contract");
+        if (!adminContract) {
+            allApproved = false;
+        }
+    }
 
     const user = await db.query.users.findFirst({
         where: eq(users.id, session.user.id),
         columns: { stepApprovalStatus: true }
     });
 
-    // Fallback: If all docs are approved but step status isn't updated yet, treat as approved
-    const finalStepStatus = allApproved ? "approved" : (user?.stepApprovalStatus || "pending");
+    // Determine finalStepStatus:
+    // - If allApproved (all docs present & approved), status is "approved"
+    // - If admin explicitly set stepApprovalStatus to "approved" (via manage-document auto-check), trust it
+    // - Otherwise use DB status (typically "pending")
+    const dbStatus = user?.stepApprovalStatus || "pending";
+    const finalStepStatus = allApproved ? "approved" : dbStatus;
 
     return {
         hasDocumentsInReview,
@@ -181,12 +198,9 @@ export async function submitDocumentsForReview(step?: number) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 
-    // Define which document types belong to which step
-    const stepDocTypes: Record<number, string[]> = {
-        3: ["passport", "diploma", "transcript", "biometric_photo"], // Documents (Step 3)
-        4: ["signed_contract"], // Contract (Step 4)
-        5: ["passport_translation", "diploma_translation", "transcript_translation"], // Translation (Step 5)
-    };
+    // Use STEP_REQUIREMENTS as single source of truth
+    const { STEP_REQUIREMENTS } = await import("@/lib/constants");
+    const requiredTypes: string[] = step ? (STEP_REQUIREMENTS[step] || []) : [];
 
     // Get all user documents
     const userDocs = await db.query.documents.findMany({
@@ -195,8 +209,8 @@ export async function submitDocumentsForReview(step?: number) {
 
     // Filter by step if provided
     let relevantDocs = userDocs;
-    if (step && stepDocTypes[step]) {
-        relevantDocs = userDocs.filter(doc => stepDocTypes[step].includes(doc.type));
+    if (requiredTypes.length > 0) {
+        relevantDocs = userDocs.filter(doc => requiredTypes.includes(doc.type));
     }
 
     // Check if all relevant documents are already approved or reviewing (no need to submit again)
@@ -236,6 +250,21 @@ export async function submitDocumentsForReview(step?: number) {
     revalidatePath("/contract");
     revalidatePath("/translation");
     revalidatePath("/dashboard");
+
+    // Send WhatsApp Notification for Step 3 (Evrak)
+    if (step === 3) {
+        try {
+            const { createNotification } = await import("./notifications");
+            await createNotification(
+                session.user.id,
+                "document_uploaded",
+                "Evraklarınız Alındı",
+                "Tüm evraklarınız tarafımıza ulaştı, en kısa zamanda inceleyip size döneceğiz."
+            );
+        } catch (error) {
+            console.error("Failed to send WhatsApp notification:", error);
+        }
+    }
 
     return { success: true, message: "Belgeleriniz onaya gönderildi.", isInReview: true };
 }

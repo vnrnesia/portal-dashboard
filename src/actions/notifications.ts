@@ -52,7 +52,7 @@ export async function createNotification(
             // Generate Magic Link
             const magicLink = await generateMagicLink(userId);
 
-            const whatsappMessage = `*Sayın ${userData.name || 'Öğrenci'},*\n\n${title}\n\n${message}\n\n🔗 *Hızlı Giriş:* ${magicLink}\n_Giriş yapmak için linke tıklayınız._`;
+            const whatsappMessage = `*Sayın ${userData.name || 'Öğrenci'},*\n\n${title}\n\n${message}\n\nHızlı Giriş Linkiniz:\n${magicLink}\n\n_Giriş yapmak için yukarıdaki linke tıklayınız._`;
 
             // Do not await to avoid blocking UI
             sendWhatsAppText(userData.phone, whatsappMessage).catch(err => {

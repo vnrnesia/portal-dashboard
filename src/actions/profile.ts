@@ -57,6 +57,15 @@ export async function updateProfile(data: ProfileData) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 
+    // Check if user already had a phone (for welcome message)
+    const existingUser = await db.query.users.findFirst({
+        where: eq(users.id, session.user.id),
+        columns: { phone: true, name: true }
+    });
+
+    const hadPhoneBefore = !!existingUser?.phone;
+    const isNewPhone = !hadPhoneBefore && !!data.phone;
+
     await db.update(users)
         .set({
             name: data.name,
@@ -76,6 +85,25 @@ export async function updateProfile(data: ProfileData) {
             updatedAt: new Date()
         })
         .where(eq(users.id, session.user.id));
+
+    // Send WhatsApp welcome message if phone saved for first time
+    if (isNewPhone && data.phone) {
+        try {
+            const { sendWhatsAppText } = await import("@/lib/evolution-api");
+            const { generateMagicLink } = await import("@/actions/magic-link");
+
+            const magicLink = await generateMagicLink(session.user.id);
+            const userName = data.name || existingUser?.name || "Öğrenci";
+
+            const welcomeMessage = `*Hoş geldiniz, ${userName}!* 🎓\n\nStudent Consultancy Portal'a telefon numaranız başarıyla kaydedildi.\n\n📱 Bu numara üzerinden:\n• Evrak durumunuz hakkında bildirim alacaksınız\n• Süreçlerinizle ilgili destek alabileceksiniz\n\n🔗 *Hızlı Giriş:* ${magicLink}\n_Panele giriş yapmak için linke tıklayınız._`;
+
+            sendWhatsAppText(data.phone, welcomeMessage).catch(err => {
+                console.error("WhatsApp welcome message error:", err);
+            });
+        } catch (error) {
+            console.error("WhatsApp welcome logic failed:", error);
+        }
+    }
 
     revalidatePath("/profile");
     revalidatePath("/dashboard");

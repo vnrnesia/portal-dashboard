@@ -12,7 +12,7 @@ export const APPLICATION_STEPS = [
 export const STEP_REQUIREMENTS: Record<number, string[]> = {
     1: [], // Registration always done if user exists
     2: [], // Program selection (checked via saved programs?)
-    3: ["passport", "diploma", "transcript", "biometric_photo"], // Essential docs
+    3: ["passport", "diploma", "transcript", "biometric"], // Essential docs
     4: ["signed_contract"],
     5: ["passport_translation", "diploma_translation", "transcript_translation"],
     6: [], // University Application (Manual check for now)
