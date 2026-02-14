@@ -22,7 +22,7 @@ export function SidebarTimeline({ currentStep = 1 }: { currentStep?: number }) {
             </h4>
             <div className="space-y-0 relative pl-2">
                 {/* Vertical Line */}
-                <div className="absolute left-[19px] top-2 bottom-2 w-[1px] bg-border" />
+                <div className="absolute left-[19px] top-2 bottom-2 w-[1px] bg-sidebar-border" />
 
                 {steps.map((step, index) => {
                     let status = "pending";
@@ -36,8 +36,8 @@ export function SidebarTimeline({ currentStep = 1 }: { currentStep?: number }) {
                             <div className={cn(
                                 "z-10 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all",
                                 status === "completed" && "bg-green-500 border-green-500 text-white",
-                                status === "current" && "bg-white border-primary text-primary ring-2 ring-primary/20",
-                                status === "locked" && "bg-white border-gray-200 text-gray-300"
+                                status === "current" && "bg-sidebar border-primary text-primary ring-2 ring-primary/20",
+                                status === "locked" && "bg-sidebar border-sidebar-border text-muted-foreground/30"
                             )}>
                                 {status === "completed" && <CheckCircle2 className="w-2.5 h-2.5" />}
                                 {status === "current" && <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
@@ -47,9 +47,9 @@ export function SidebarTimeline({ currentStep = 1 }: { currentStep?: number }) {
                             {/* Text */}
                             <span className={cn(
                                 "text-sm transition-colors duration-200",
-                                status === "completed" && "text-muted-foreground line-through decoration-transparent group-hover:decoration-gray-400 group-hover:text-gray-600",
+                                status === "completed" && "text-muted-foreground line-through decoration-transparent group-hover:decoration-muted-foreground/50 group-hover:text-muted-foreground/80",
                                 status === "current" && "font-medium text-primary",
-                                status === "locked" && "text-muted-foreground/60"
+                                status === "locked" && "text-muted-foreground/50"
                             )}>
                                 {step.title}
                             </span>

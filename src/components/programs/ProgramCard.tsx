@@ -53,26 +53,26 @@ export function ProgramCard({ program, currentSelection }: ProgramCardProps) {
                 <CardHeader className="pb-4">
                     <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center font-bold text-gray-500 overflow-hidden">
+                            <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center font-bold text-muted-foreground overflow-hidden">
                                 {program.logo}
                             </div>
                             <div>
                                 <h3 className="font-bold text-lg leading-tight line-clamp-2">{program.name}</h3>
-                                <p className="text-sm text-gray-500">{program.university}</p>
+                                <p className="text-sm text-muted-foreground">{program.university}</p>
                             </div>
                         </div>
                         {isSelected && (
                             <Badge className="bg-green-600 hover:bg-green-700">Seçildi</Badge>
                         )}
                         {!isSelected && program.rating >= 90 && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 shrink-0">
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 shrink-0">
                                 %{program.rating} Uygun
                             </Badge>
                         )}
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-4">
-                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                    <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-primary" />
                             {program.city}, {program.country}
@@ -82,7 +82,7 @@ export function ProgramCard({ program, currentSelection }: ProgramCardProps) {
                             {program.duration}
                         </div>
                         <div className="flex items-center gap-2">
-                            <Banknote className="h-4 w-4 text-green-600" />
+                            <Banknote className="h-4 w-4 text-green-600 dark:text-green-400" />
                             {program.tuition}
                         </div>
                         <div className="flex items-center gap-2">
@@ -96,7 +96,7 @@ export function ProgramCard({ program, currentSelection }: ProgramCardProps) {
                         ))}
                     </div>
                 </CardContent>
-                <CardFooter className="grid grid-cols-2 gap-2 pt-4 border-t bg-orange-50/50">
+                <CardFooter className="grid grid-cols-2 gap-2 pt-4 border-t bg-muted/40">
                     <Button variant="outline" size="sm" onClick={() => addToCompare(program)}>
                         Karşılaştır
                     </Button>

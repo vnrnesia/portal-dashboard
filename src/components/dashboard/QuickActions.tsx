@@ -9,14 +9,14 @@ export function QuickActions() {
             icon: Search,
             href: "/programs",
             variant: "outline" as const,
-            color: "border-blue-200 hover:bg-blue-50 text-primary/90"
+            color: "border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
         },
         {
             label: "Destek Al",
             icon: WhatsAppIcon,
             href: "https://wa.me/905373056266",
             variant: "outline" as const,
-            color: "border-green-200 hover:bg-green-50 text-green-700",
+            color: "border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400",
             external: true
         },
         {
@@ -24,12 +24,12 @@ export function QuickActions() {
             icon: FileText,
             href: "/contract",
             variant: "ghost" as const,
-            color: "hover:bg-gray-100"
+            color: "hover:bg-accent hover:text-accent-foreground"
         }
     ];
 
     return (
-        <div className="bg-white p-6 rounded-xl border shadow-sm h-full">
+        <div className="bg-card p-6 rounded-xl border shadow-sm h-full">
             <h3 className="font-semibold mb-4">Hızlı İşlemler</h3>
             <div className="grid grid-cols-2 gap-3">
                 {actions.map((action, index) => (

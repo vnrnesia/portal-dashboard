@@ -88,7 +88,7 @@ export default async function StudentLayout({
                             </BreadcrumbList>
                         </Breadcrumb>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 hidden">
                         <ThemeToggle />
                     </div>
                 </header>

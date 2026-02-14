@@ -81,10 +81,10 @@ export default function DashboardPage() {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Genel Bakış</h1>
-                    <p className="text-gray-500">Hoş geldin, <span className="font-semibold text-primary">{user?.name}</span>. Eğitim yolculuğunda bugünkü durumun:</p>
+                    <h1 className="text-3xl font-bold text-foreground">Genel Bakış</h1>
+                    <p className="text-muted-foreground">Hoş geldin, <span className="font-semibold text-primary">{user?.name}</span>. Eğitim yolculuğunda bugünkü durumun:</p>
                 </div>
-                <div className="hidden md:block text-sm text-gray-500 bg-orange-50 px-4 py-2 rounded-lg border border-orange-100">
+                <div className="hidden md:block text-sm text-muted-foreground bg-primary/5 px-4 py-2 rounded-lg border border-primary/20">
                     Mevcut Aşama: <strong>{currentLabel}</strong>
                 </div>
             </div>
@@ -225,8 +225,9 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Notifications + Quick Actions side by side */}
+                    {/* Notifications + Quick Actions side by side */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-xl border shadow-sm">
+                        <div className="bg-card p-6 rounded-xl border shadow-sm">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-semibold flex items-center gap-2">
                                     <Bell className="h-4 w-4" />
@@ -246,13 +247,13 @@ export default function DashboardPage() {
                                         <Link
                                             key={notif.id}
                                             href="/notifications"
-                                            className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                                            className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
                                         >
-                                            <div className={`w-2 h-2 mt-2 rounded-full ${!notif.isRead ? 'bg-red-500' : 'bg-gray-300'}`} />
+                                            <div className={`w-2 h-2 mt-2 rounded-full ${!notif.isRead ? 'bg-red-500' : 'bg-muted-foreground/30'}`} />
                                             <div className="flex-1">
-                                                <p className="text-sm text-gray-900 font-medium">{notif.title}</p>
-                                                <p className="text-xs text-gray-600 line-clamp-1">{notif.message}</p>
-                                                <p className="text-xs text-gray-500 mt-1">
+                                                <p className="text-sm font-medium">{notif.title}</p>
+                                                <p className="text-xs text-muted-foreground line-clamp-1">{notif.message}</p>
+                                                <p className="text-xs text-muted-foreground mt-1">
                                                     {notif.createdAt && formatDistanceToNow(
                                                         new Date(notif.createdAt),
                                                         { addSuffix: true, locale: tr }

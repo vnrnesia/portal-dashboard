@@ -25,9 +25,9 @@ export function DetailedTimeline({ currentStep = 1 }: { currentStep?: number }) 
     }));
 
     return (
-        <Card className="p-6 h-fit bg-white border shadow-sm">
+        <Card className="p-6 h-fit bg-card border shadow-sm">
             <h3 className="font-semibold text-lg mb-1">Başvuru Süreci</h3>
-            <p className="text-sm text-gray-500 mb-6">Eğitim yolculuğunun tüm adımlarını buradan takip edebilirsin.</p>
+            <p className="text-sm text-muted-foreground mb-6">Eğitim yolculuğunun tüm adımlarını buradan takip edebilirsin.</p>
 
             <div className="space-y-0">
                 {steps.map((step, index) => (
@@ -35,10 +35,10 @@ export function DetailedTimeline({ currentStep = 1 }: { currentStep?: number }) 
                         {/* Line & Icon */}
                         <div className="flex flex-col items-center">
                             <div className={cn(
-                                "w-6 h-6 rounded-full flex items-center justify-center border-2 z-10 bg-white shrink-0",
+                                "w-6 h-6 rounded-full flex items-center justify-center border-2 z-10 bg-card shrink-0",
                                 step.status === "completed" && "bg-green-600 border-green-600 text-white",
                                 step.status === "current" && "border-primary text-primary animate-pulse",
-                                (step.status === "pending" || step.status === "locked") && "border-gray-200 text-gray-300"
+                                (step.status === "pending" || step.status === "locked") && "border-muted text-muted-foreground"
                             )}>
                                 {step.status === "completed" ? <CheckCircle2 className="w-4 h-4" /> :
                                     step.status === "current" ? <Clock className="w-4 h-4" /> :
@@ -47,7 +47,7 @@ export function DetailedTimeline({ currentStep = 1 }: { currentStep?: number }) 
                             {index !== steps.length - 1 && (
                                 <div className={cn(
                                     "w-[2px] h-full min-h-[40px] -my-1",
-                                    step.status === "completed" ? "bg-green-600" : "bg-gray-200"
+                                    step.status === "completed" ? "bg-green-600" : "bg-muted"
                                 )}></div>
                             )}
                         </div>
@@ -59,18 +59,18 @@ export function DetailedTimeline({ currentStep = 1 }: { currentStep?: number }) 
                         )}>
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h4 className={cn("font-medium text-sm leading-none", step.status === "completed" ? "text-green-700" : "text-gray-900")}>
+                                    <h4 className={cn("font-medium text-sm leading-none", step.status === "completed" ? "text-green-600 dark:text-green-500" : "text-foreground")}>
                                         {step.title}
                                     </h4>
-                                    <p className="text-xs text-gray-500 mt-1 leading-snug">{step.desc}</p>
+                                    <p className="text-xs text-muted-foreground mt-1 leading-snug">{step.desc}</p>
                                 </div>
                                 {/* Date Display */}
                                 {step.date && (
                                     <span className={cn(
                                         "text-[10px] font-medium px-1.5 py-0.5 rounded border ml-2 whitespace-nowrap",
                                         step.date === "Bugün"
-                                            ? "text-primary bg-orange-50 border-orange-100"
-                                            : "text-green-600 bg-green-50 border-green-100"
+                                            ? "text-primary bg-primary/5 border-primary/20"
+                                            : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30"
                                     )}>
                                         {step.date}
                                     </span>

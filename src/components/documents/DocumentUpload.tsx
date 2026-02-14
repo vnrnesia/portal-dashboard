@@ -143,27 +143,27 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
     return (
         <Card className={cn(
             "p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300",
-            doc.validationError && "border-2 border-red-500 animate-shake shadow-red-100 shadow-lg"
+            doc.validationError && "border-2 border-red-500 animate-shake shadow-red-100 dark:shadow-red-900/20 shadow-lg"
         )}>
             <div className="flex items-center gap-4">
                 <div className={cn(
                     "p-3 rounded-lg",
-                    doc.status === 'approved' ? 'bg-green-100' : 'bg-gray-100',
-                    doc.validationError && "bg-red-50"
+                    doc.status === 'approved' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-muted',
+                    doc.validationError && "bg-red-50 dark:bg-red-900/20"
                 )}>
                     {doc.status === 'approved' ? (
-                        <CheckCircle className="h-6 w-6 text-green-600" />
+                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-500" />
                     ) : (
-                        <Clock className={cn("h-6 w-6", doc.validationError ? "text-red-500" : "text-gray-500")} />
+                        <Clock className={cn("h-6 w-6", doc.validationError ? "text-red-500" : "text-muted-foreground")} />
                     )}
                 </div>
                 <div>
-                    <h4 className={cn("font-semibold", doc.validationError ? "text-red-700" : "text-gray-900")}>
+                    <h4 className={cn("font-semibold", doc.validationError ? "text-red-700 dark:text-red-400" : "text-foreground")}>
                         {doc.label} {doc.validationError && "(Zorunlu Alan)"}
                     </h4>
                     <div className="flex items-center gap-2 mt-1">
                         {getStatusBadge(doc.status)}
-                        {doc.fileName && <span className="text-xs text-gray-500 max-w-[200px] truncate">{doc.fileName}</span>}
+                        {doc.fileName && <span className="text-xs text-muted-foreground max-w-[200px] truncate">{doc.fileName}</span>}
                     </div>
                 </div>
             </div>
@@ -172,7 +172,7 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
                 {isUploading ? (
                     <div className="flex-1 sm:flex-none min-w-[200px]">
                         <div className="flex items-center gap-3">
-                            <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div className="flex-1 bg-secondary rounded-full h-2 overflow-hidden">
                                 <div
                                     className="bg-primary h-full transition-all duration-200 ease-out"
                                     style={{ width: `${uploadProgress}%` }}
@@ -182,18 +182,18 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
                                 {uploadProgress}%
                             </span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">Yükleniyor...</p>
+                        <p className="text-xs text-muted-foreground mt-1">Yükleniyor...</p>
                     </div>
                 ) : doc.status === 'pending' || doc.status === 'rejected' || !doc.status ? (
                     <div {...getRootProps()} className={cn(
                         "flex-1 sm:flex-none cursor-pointer border-2 border-dashed rounded-lg px-6 py-2 transition-colors",
-                        isDragActive ? 'border-primary bg-orange-50' : 'border-gray-200 hover:border-blue-400',
-                        doc.validationError && 'border-red-300 bg-red-50 hover:border-red-500'
+                        isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50',
+                        doc.validationError && 'border-red-300 bg-red-50 dark:bg-red-900/10 hover:border-red-500'
                     )}>
                         <input {...getInputProps()} />
-                        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                             <UploadCloud className={cn("h-4 w-4", doc.validationError && "text-red-500")} />
-                            <span className={doc.validationError ? "text-red-600 font-medium" : ""}>
+                            <span className={doc.validationError ? "text-red-600 dark:text-red-400 font-medium" : ""}>
                                 {isDragActive ? 'Bırak...' : doc.validationError ? 'Lütfen Yükleyin' : 'Dosya Seç'}
                             </span>
                         </div>
@@ -205,7 +205,7 @@ function DocumentItem({ doc, onPreview, onStatusChange }: { doc: Document, onPre
                             Önizle
                         </Button>
                         {(doc.status === 'uploaded') && (
-                            <Button variant="ghost" size="icon" onClick={onDelete} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                            <Button variant="ghost" size="icon" onClick={onDelete} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
                                 <Trash2 className="h-4 w-4" />
                             </Button>
                         )}
@@ -399,7 +399,7 @@ export function DocumentUploadList({ initialDocuments, userPhone: initialUserPho
                     <DialogHeader>
                         <DialogTitle>{previewDoc?.label}</DialogTitle>
                     </DialogHeader>
-                    <div className="flex-1 overflow-auto bg-gray-50 rounded-lg flex items-center justify-center p-4 border">
+                    <div className="flex-1 overflow-auto bg-muted/30 rounded-lg flex items-center justify-center p-4 border">
                         {previewDoc?.fileUrl ? (
                             previewDoc.fileName?.endsWith('.pdf') ? (
                                 <iframe src={previewDoc.fileUrl} className="w-full h-full" />
